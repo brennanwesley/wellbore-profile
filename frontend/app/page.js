@@ -60,11 +60,11 @@ export default function HomePage() {
         <div>
           <p className="well-name">{WELL_NAME}</p>
           <h1>Wellbore Profile</h1>
-          <p className="subtitle">Phase 1: Easting / Northing / MD trajectory viewer (ft)</p>
+          <p className="subtitle">Phase 1: Easting / Northing / TVD trajectory viewer (ft)</p>
         </div>
 
         <label htmlFor="coordinates" className="label">
-          Enter coordinates (one point per line: <code>Easting,Northing,MD</code>)
+          Enter coordinates (one point per line: <code>Easting,Northing,TVD</code>)
         </label>
         <textarea
           id="coordinates"

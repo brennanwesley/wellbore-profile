@@ -128,7 +128,7 @@ export default function WellTrajectoryViewer({ points }) {
 
         {selectedPoint && selectedPosition ? (
           <Html position={selectedPosition} center distanceFactor={14}>
-            <div className="depth-pill">MD: {selectedPoint.z.toFixed(1)} ft</div>
+            <div className="depth-pill">TVD: {selectedPoint.z.toFixed(1)} ft</div>
           </Html>
         ) : null}
 
@@ -139,12 +139,12 @@ export default function WellTrajectoryViewer({ points }) {
           <div className="axis-tag">N</div>
         </Html>
         <Html position={[center[0], center[1], center[2] - axisLength]} center distanceFactor={20}>
-          <div className="axis-tag">MD (+)</div>
+          <div className="axis-tag">TVD (+)</div>
         </Html>
 
         <OrbitControls makeDefault target={center} enableDamping dampingFactor={0.08} />
       </Canvas>
-      <div className="viewer-hint">Hover or click a point to inspect MD (ft).</div>
+      <div className="viewer-hint">Hover or click a point to inspect TVD (ft).</div>
     </div>
   );
 }
