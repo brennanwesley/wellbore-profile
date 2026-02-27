@@ -25,7 +25,7 @@ export default function HomePage() {
       <section className="panel control-panel">
         <div>
           <h1>Wellbore Profile</h1>
-          <p className="subtitle">Phase 1: single-well 3D trajectory visualizer</p>
+          <p className="subtitle">Phase 1: single-well 3D trajectory visualizer (build refresh)</p>
         </div>
 
         <label htmlFor="coordinates" className="label">
