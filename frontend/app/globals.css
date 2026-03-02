@@ -66,9 +66,36 @@ body {
   color: var(--muted);
 }
 
+.import-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.import-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-input-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.import-source {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .coordinate-input {
   width: 100%;
-  min-height: 260px;
+  min-height: 180px;
   resize: vertical;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -122,6 +149,90 @@ body {
   margin: 0 0 0.35rem;
   color: var(--accent-strong);
   font-weight: 600;
+}
+
+.mapper-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.6rem;
+}
+
+.mapper-field,
+.mapping-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.mapper-input,
+.mapper-select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fffcf7;
+  color: var(--ink);
+  padding: 0.45rem 0.55rem;
+  font-size: 0.88rem;
+}
+
+.helper-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.65rem;
+  background: #fdf8ef;
+}
+
+.warning-list {
+  margin: 0.2rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.preview-shell {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.6rem;
+  background: #fdf8ef;
+}
+
+.preview-title {
+  margin: 0 0 0.45rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.preview-table-wrap {
+  overflow-x: auto;
+}
+
+.preview-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.79rem;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.4rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.preview-table th {
+  background: #f3ebdc;
+  color: #294355;
+  font-weight: 700;
 }
 
 .warning {
