@@ -2,7 +2,30 @@
 
 import { Canvas } from "@react-three/fiber";
 import { Html, Line, OrbitControls } from "@react-three/drei";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+const ISOMETRIC_POLAR_ANGLE = Math.acos(1 / Math.sqrt(3));
+const ISOMETRIC_POLAR_RANGE = Math.PI / 9;
+const MIN_ISOMETRIC_POLAR = Math.max(0.25, ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_RANGE);
+const MAX_ISOMETRIC_POLAR = Math.min(Math.PI / 2.15, ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_RANGE);
+
+function formatNumber(value, digits = 1) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return "—";
+  }
+
+  return numericValue.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatAnnotation(value) {
+  const text = String(value ?? "").trim();
+  return text || "—";
+}
 
 function getBounds(points) {
   const initial = {
@@ -39,8 +62,19 @@ function getBounds(points) {
 }
 
 export default function WellTrajectoryViewer({ points }) {
-  const [selectedPointIndex, setSelectedPointIndex] = useState(null);
+  const [hoverPointIndex, setHoverPointIndex] = useState(null);
+  const [pinnedPointIndex, setPinnedPointIndex] = useState(null);
   const hasEnoughPoints = Array.isArray(points) && points.length >= 2;
+
+  useEffect(() => {
+    if (hoverPointIndex !== null && (hoverPointIndex < 0 || hoverPointIndex >= points.length)) {
+      setHoverPointIndex(null);
+    }
+
+    if (pinnedPointIndex !== null && (pinnedPointIndex < 0 || pinnedPointIndex >= points.length)) {
+      setPinnedPointIndex(null);
+    }
+  }, [hoverPointIndex, pinnedPointIndex, points.length]);
 
   const { center, span } = useMemo(() => {
     if (!hasEnoughPoints) {
@@ -55,13 +89,14 @@ export default function WellTrajectoryViewer({ points }) {
     [hasEnoughPoints, points],
   );
 
-  const selectedPoint =
-    selectedPointIndex !== null && selectedPointIndex >= 0 && selectedPointIndex < points.length
-      ? points[selectedPointIndex]
+  const activePointIndex = pinnedPointIndex ?? hoverPointIndex;
+  const activePoint =
+    activePointIndex !== null && activePointIndex >= 0 && activePointIndex < points.length
+      ? points[activePointIndex]
       : null;
-  const selectedPosition =
-    selectedPointIndex !== null && selectedPointIndex >= 0 && selectedPointIndex < linePoints.length
-      ? linePoints[selectedPointIndex]
+  const activePosition =
+    activePointIndex !== null && activePointIndex >= 0 && activePointIndex < linePoints.length
+      ? linePoints[activePointIndex]
       : null;
 
   if (!hasEnoughPoints) {
@@ -75,9 +110,13 @@ export default function WellTrajectoryViewer({ points }) {
   return (
     <div className="viewer-canvas">
       <Canvas
-        onPointerMissed={() => setSelectedPointIndex(null)}
+        onPointerMissed={() => {
+          setPinnedPointIndex(null);
+          setHoverPointIndex(null);
+        }}
         camera={{
           position: [center[0] + span * 1.4, center[1] + span * 0.8, center[2] + span * 1.4],
+          up: [0, 0, 1],
           fov: 50,
           near: 0.1,
           far: 100000,
@@ -100,18 +139,24 @@ export default function WellTrajectoryViewer({ points }) {
             position={position}
             onPointerDown={(event) => {
               event.stopPropagation();
-              setSelectedPointIndex(index);
+              setPinnedPointIndex((currentIndex) => (currentIndex === index ? null : index));
             }}
             onPointerOver={(event) => {
               event.stopPropagation();
-              setSelectedPointIndex(index);
+              setHoverPointIndex(index);
+            }}
+            onPointerOut={(event) => {
+              event.stopPropagation();
+              setHoverPointIndex((currentIndex) => (currentIndex === index ? null : currentIndex));
             }}
           >
             <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
             <meshStandardMaterial
-              color={index === selectedPointIndex ? "#f28f3b" : "#3f7d9e"}
+              color={
+                index === pinnedPointIndex ? "#f28f3b" : index === hoverPointIndex ? "#e9a963" : "#3f7d9e"
+              }
               transparent
-              opacity={index === selectedPointIndex ? 0.95 : 0.45}
+              opacity={index === pinnedPointIndex ? 0.95 : index === hoverPointIndex ? 0.78 : 0.45}
             />
           </mesh>
         ))}
@@ -126,9 +171,11 @@ export default function WellTrajectoryViewer({ points }) {
           <meshStandardMaterial color="#c7472f" />
         </mesh>
 
-        {selectedPoint && selectedPosition ? (
-          <Html position={selectedPosition} center distanceFactor={14}>
-            <div className="depth-pill">TVD: {selectedPoint.z.toFixed(1)} ft</div>
+        {activePoint && activePosition ? (
+          <Html position={activePosition} center distanceFactor={14}>
+            <div className="depth-pill">
+              {pinnedPointIndex !== null ? "Pinned" : "Hover"} | MD: {formatNumber(activePoint.md, 1)} ft | TVD: {formatNumber(activePoint.tvd ?? activePoint.z, 1)} ft
+            </div>
           </Html>
         ) : null}
 
@@ -142,9 +189,69 @@ export default function WellTrajectoryViewer({ points }) {
           <div className="axis-tag">TVD (+)</div>
         </Html>
 
-        <OrbitControls makeDefault target={center} enableDamping dampingFactor={0.08} />
+        <OrbitControls
+          makeDefault
+          target={center}
+          enableDamping
+          dampingFactor={0.08}
+          minPolarAngle={MIN_ISOMETRIC_POLAR}
+          maxPolarAngle={MAX_ISOMETRIC_POLAR}
+          minAzimuthAngle={-Infinity}
+          maxAzimuthAngle={Infinity}
+        />
       </Canvas>
-      <div className="viewer-hint">Hover or click a point to inspect TVD (ft).</div>
+
+      <section className="inspector-card" aria-live="polite">
+        <div className="inspector-header">
+          <p className="inspector-title">
+            {pinnedPointIndex !== null
+              ? `Pinned Point #${pinnedPointIndex + 1}`
+              : activePointIndex !== null
+                ? `Hover Point #${activePointIndex + 1}`
+                : "Point Inspector"}
+          </p>
+          {pinnedPointIndex !== null ? (
+            <button type="button" className="secondary-btn inspector-clear-btn" onClick={() => setPinnedPointIndex(null)}>
+              Clear Pin
+            </button>
+          ) : null}
+        </div>
+
+        {activePoint ? (
+          <dl className="inspector-grid">
+            <div>
+              <dt>MD (ft)</dt>
+              <dd>{formatNumber(activePoint.md, 1)}</dd>
+            </div>
+            <div>
+              <dt>TVD (ft)</dt>
+              <dd>{formatNumber(activePoint.tvd ?? activePoint.z, 1)}</dd>
+            </div>
+            <div>
+              <dt>Northing (ft)</dt>
+              <dd>{formatNumber(activePoint.northing ?? activePoint.y, 2)}</dd>
+            </div>
+            <div>
+              <dt>Easting (ft)</dt>
+              <dd>{formatNumber(activePoint.easting ?? activePoint.x, 2)}</dd>
+            </div>
+            <div>
+              <dt>DLS (deg/100ft)</dt>
+              <dd>{formatNumber(activePoint.dls, 2)}</dd>
+            </div>
+            <div className="inspector-annotation">
+              <dt>Annotation</dt>
+              <dd>{formatAnnotation(activePoint.annotations)}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p className="inspector-empty">
+            Click a trajectory point to pin MD/TVD/N/E/DLS/Annotation. Hover previews are temporary.
+          </p>
+        )}
+      </section>
+
+      <div className="viewer-hint">Isometric view locked. Drag to rotate 360°, scroll to zoom, right-drag to pan.</div>
     </div>
   );
 }

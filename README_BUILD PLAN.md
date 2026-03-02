@@ -228,8 +228,9 @@ Each adder must support visibility toggle, color/style config, and quick edit/re
 - [x] ~~Add sidebar manual fields (Well Name, KB, Ground Elevation) with metadata override capability~~
 - [x] ~~Add validation summary panel (valid rows, invalid rows, row-count mismatch, missing required mappings)~~
 
-- [ ] Implement isometric-only camera controls with continuous 360 azimuth rotation
-- [ ] Add click-to-pin point inspector with MD/TVD/N/E/DLS/Annotation
+- [x] ~~Implement isometric-only camera controls with continuous 360 azimuth rotation~~
+- [x] ~~Add click-to-pin point inspector with MD/TVD/N/E/DLS/Annotation~~
+
 - [ ] Add persistent TVD ruler/ticks
 - [ ] Add formation table rows (Name/Top/Bottom/Visible/Color) + trajectory interval overlay
 - [ ] Add unit tests for import mapping, validation rules, and KPI metrics
