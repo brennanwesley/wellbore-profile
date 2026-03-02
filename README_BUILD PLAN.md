@@ -233,5 +233,5 @@ Each adder must support visibility toggle, color/style config, and quick edit/re
 
 - [x] ~~Add persistent TVD ruler/ticks~~
 - [x] ~~Add formation table rows (Name/Top/Bottom/Visible/Color) + trajectory interval overlay~~
-- [ ] Add unit tests for import mapping, validation rules, and KPI metrics
-- [ ] Push completed slice to GitHub after validation; then mark the slice as `- [x] ~~...~~`
+- [x] ~~Add unit tests for import mapping, validation rules, and KPI metrics~~
+- [x] ~~Push completed slice to GitHub after validation; then mark the slice as `- [x] ~~...~~`~~
