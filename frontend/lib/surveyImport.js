@@ -85,6 +85,12 @@ export const REQUIRED_MAPPING_KEYS = MAPPING_FIELDS.filter((field) => field.requ
   (field) => field.key,
 );
 
+const METADATA_FIELD_MATCHERS = {
+  wellName: ["wellname", "well name", "well"],
+  kellyBushing: ["kelly bushing", "kelly bushing elev", "kelly bushing elevation", "kb", "kb elev"],
+  groundElevation: ["ground elev", "ground elevation", "ground"],
+};
+
 function normalizeValue(value) {
   return String(value ?? "").trim();
 }
@@ -106,8 +112,89 @@ function toNumber(value) {
     return null;
   }
 
-  const numberValue = Number(value);
+  const cleaned = String(value).replace(/,/g, "").trim();
+  const numberValue = Number(cleaned);
   return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function hasMetadataValue(value) {
+  return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+export function extractMetadataSuggestions(rows) {
+  const suggestions = {
+    wellName: "",
+    kellyBushing: null,
+    groundElevation: null,
+    sourceRows: {},
+  };
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return suggestions;
+  }
+
+  const maxRowsToScan = Math.min(rows.length, 45);
+
+  for (let rowIndex = 0; rowIndex < maxRowsToScan; rowIndex += 1) {
+    const row = rows[rowIndex] ?? [];
+    const leftCell = normalizeValue(row[0]);
+    const rightCell = normalizeValue(row[1]);
+
+    if (!leftCell || !rightCell) {
+      continue;
+    }
+
+    const normalizedLeft = normalizeMatch(leftCell);
+
+    if (
+      !suggestions.wellName &&
+      METADATA_FIELD_MATCHERS.wellName.some((alias) => normalizedLeft.includes(normalizeMatch(alias)))
+    ) {
+      suggestions.wellName = rightCell;
+      suggestions.sourceRows.wellName = rowIndex + 1;
+      continue;
+    }
+
+    if (
+      suggestions.kellyBushing === null &&
+      METADATA_FIELD_MATCHERS.kellyBushing.some((alias) => normalizedLeft.includes(normalizeMatch(alias)))
+    ) {
+      const parsedKb = toNumber(rightCell);
+
+      if (parsedKb !== null) {
+        suggestions.kellyBushing = parsedKb;
+        suggestions.sourceRows.kellyBushing = rowIndex + 1;
+      }
+
+      continue;
+    }
+
+    if (
+      suggestions.groundElevation === null &&
+      METADATA_FIELD_MATCHERS.groundElevation.some((alias) => normalizedLeft.includes(normalizeMatch(alias)))
+    ) {
+      const parsedGround = toNumber(rightCell);
+
+      if (parsedGround !== null) {
+        suggestions.groundElevation = parsedGround;
+        suggestions.sourceRows.groundElevation = rowIndex + 1;
+      }
+    }
+  }
+
+  return suggestions;
+}
+
+export function hasMetadataSuggestions(metadata) {
+  if (!metadata) {
+    return false;
+  }
+
+  return (
+    hasMetadataValue(metadata.wellName) ||
+    hasMetadataValue(metadata.kellyBushing) ||
+    hasMetadataValue(metadata.groundElevation)
+  );
 }
 
 export function getSpreadsheetColumnLabel(columnIndex) {

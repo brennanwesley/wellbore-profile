@@ -225,8 +225,9 @@ Each adder must support visibility toggle, color/style config, and quick edit/re
 
 - [x] ~~Run Supabase preflight table check for `public` schema before DB build tasks (result: no tables).~~
 - [x] ~~Implement format-agnostic import mapper (upload/paste, header-row selection, field mapping)~~
-- [ ] Add sidebar manual fields (Well Name, KB, Ground Elevation) with metadata override capability
-- [ ] Add validation summary panel (valid rows, invalid rows, row-count mismatch, missing required mappings)
+- [x] ~~Add sidebar manual fields (Well Name, KB, Ground Elevation) with metadata override capability~~
+- [x] ~~Add validation summary panel (valid rows, invalid rows, row-count mismatch, missing required mappings)~~
+
 - [ ] Implement isometric-only camera controls with continuous 360 azimuth rotation
 - [ ] Add click-to-pin point inspector with MD/TVD/N/E/DLS/Annotation
 - [ ] Add persistent TVD ruler/ticks

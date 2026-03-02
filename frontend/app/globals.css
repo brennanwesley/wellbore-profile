@@ -93,6 +93,26 @@ body {
   font-size: 0.85rem;
 }
 
+.metadata-block {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fdf8ef;
+  padding: 0.65rem;
+}
+
+.metadata-title {
+  margin: 0 0 0.5rem;
+  color: #294355;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
 .coordinate-input {
   width: 100%;
   min-height: 180px;

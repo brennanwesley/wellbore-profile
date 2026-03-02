@@ -5,7 +5,9 @@ import {
   MAPPING_FIELDS,
   buildColumnOptions,
   detectHeaderRowIndex,
+  extractMetadataSuggestions,
   extractMappedSurvey,
+  hasMetadataSuggestions,
   parseTableText,
   suggestMappings,
 } from "@/lib/surveyImport";
@@ -56,6 +58,12 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
   const [manualHeaderRow, setManualHeaderRow] = useState(1);
   const [dataStartRow, setDataStartRow] = useState(1);
   const [mappings, setMappings] = useState({});
+  const [metadataSuggestions, setMetadataSuggestions] = useState({
+    wellName: "",
+    kellyBushing: null,
+    groundElevation: null,
+    sourceRows: {},
+  });
   const [validationResult, setValidationResult] = useState(null);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
 
@@ -101,12 +109,19 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
     setRows(parsed.rows);
     setParseErrors(parsed.parseErrors);
     setValidationResult(null);
+    setMetadataSuggestions(extractMetadataSuggestions(parsed.rows));
 
     if (parsed.rows.length === 0) {
       setHeaderMode("auto");
       setManualHeaderRow(1);
       setDataStartRow(1);
       setMappings({});
+      setMetadataSuggestions({
+        wellName: "",
+        kellyBushing: null,
+        groundElevation: null,
+        sourceRows: {},
+      });
       return;
     }
 
@@ -198,8 +213,9 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
       summary: validationResult.summary,
       sourceLabel,
       warnings: validationResult.warnings,
+      metadataSuggestions,
     });
-  }, [onApplyTrajectory, sourceLabel, validationResult]);
+  }, [metadataSuggestions, onApplyTrajectory, sourceLabel, validationResult]);
 
   return (
     <section className="import-block" aria-label="Survey import mapper">
@@ -249,6 +265,18 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
 
       <div className="helper-text">
         <p className="file-status">Rows detected: {rowCount}</p>
+        {hasMetadataSuggestions(metadataSuggestions) ? (
+          <p className="helper-note">
+            Metadata detected: {metadataSuggestions.wellName ? `Well Name` : null}
+            {metadataSuggestions.wellName && metadataSuggestions.kellyBushing !== null ? ", " : null}
+            {metadataSuggestions.kellyBushing !== null ? "Kelly Bushing" : null}
+            {(metadataSuggestions.wellName || metadataSuggestions.kellyBushing !== null) &&
+            metadataSuggestions.groundElevation !== null
+              ? ", "
+              : null}
+            {metadataSuggestions.groundElevation !== null ? "Ground Elevation" : null}
+          </p>
+        ) : null}
         {parseErrors.length > 0 ? (
           <ul className="warning-list">
             {parseErrors.slice(0, 4).map((errorMessage) => (
