@@ -113,6 +113,91 @@ body {
   gap: 0.55rem;
 }
 
+.formation-block {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fdf8ef;
+  padding: 0.65rem;
+}
+
+.formation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.formation-add-btn {
+  padding: 0.45rem 0.78rem;
+  font-size: 0.8rem;
+}
+
+.formation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+
+.formation-row {
+  border: 1px solid #dbcdb4;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.48rem;
+}
+
+.formation-index {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  color: #4f6270;
+  font-weight: 700;
+}
+
+.formation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.formation-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  margin-top: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.formation-visible-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #4b5d68;
+  font-size: 0.8rem;
+}
+
+.formation-color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #4b5d68;
+  font-size: 0.8rem;
+}
+
+.formation-color-field input[type="color"] {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: transparent;
+}
+
+.formation-remove-btn {
+  padding: 0.35rem 0.62rem;
+  font-size: 0.76rem;
+}
+
 .coordinate-input {
   width: 100%;
   min-height: 180px;
@@ -377,6 +462,101 @@ body {
   font-size: 0.8rem;
 }
 
+.tvd-ruler {
+  position: absolute;
+  right: 0.7rem;
+  top: 0.7rem;
+  width: 130px;
+  background: rgba(255, 250, 242, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.55rem 0.5rem;
+  box-shadow: 0 8px 22px rgba(25, 35, 42, 0.2);
+}
+
+.tvd-ruler-title {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #284052;
+  font-weight: 700;
+}
+
+.tvd-ruler-track {
+  position: relative;
+  margin-top: 0.42rem;
+  border-left: 2px solid #3f6478;
+  height: 190px;
+}
+
+.tvd-tick {
+  position: absolute;
+  left: -2px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.tvd-tick-line {
+  width: 10px;
+  height: 2px;
+  background: #3f6478;
+}
+
+.tvd-tick-label {
+  font-size: 0.7rem;
+  color: #3e5868;
+  font-weight: 700;
+}
+
+.tvd-ruler-range {
+  margin: 0.42rem 0 0;
+  font-size: 0.72rem;
+  color: #4b6170;
+}
+
+.formation-legend {
+  position: absolute;
+  right: 0.7rem;
+  bottom: 2.6rem;
+  max-width: min(320px, calc(100% - 1.4rem));
+  background: rgba(255, 250, 242, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.5rem 0.6rem;
+  box-shadow: 0 8px 20px rgba(23, 34, 43, 0.2);
+}
+
+.formation-legend-title {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #2a4556;
+  font-weight: 700;
+}
+
+.formation-legend-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.28rem;
+  font-size: 0.74rem;
+  color: #3d5667;
+}
+
+.formation-legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.formation-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(28, 38, 48, 0.35);
+}
+
 .viewer-empty {
   height: 100%;
   min-height: 82vh;
@@ -399,6 +579,30 @@ body {
 
   .inspector-grid {
     grid-template-columns: 1fr;
+  }
+
+  .formation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .formation-row-actions {
+    justify-content: flex-start;
+  }
+
+  .tvd-ruler {
+    width: 110px;
+    right: 0.5rem;
+    top: 0.5rem;
+  }
+
+  .tvd-ruler-track {
+    height: 150px;
+  }
+
+  .formation-legend {
+    right: 0.5rem;
+    bottom: 2.4rem;
+    max-width: calc(100% - 1rem);
   }
 
   .viewer-panel,

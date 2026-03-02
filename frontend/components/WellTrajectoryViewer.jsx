@@ -9,6 +9,37 @@ const ISOMETRIC_POLAR_RANGE = Math.PI / 9;
 const MIN_ISOMETRIC_POLAR = Math.max(0.25, ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_RANGE);
 const MAX_ISOMETRIC_POLAR = Math.min(Math.PI / 2.15, ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_RANGE);
 
+function toFiniteNumber(value) {
+  const cleaned = String(value ?? "").replace(/,/g, "").trim();
+  if (!cleaned) {
+    return null;
+  }
+
+  const numericValue = Number(cleaned);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function getNiceTickStep(minValue, maxValue, targetTickCount = 6) {
+  const range = Math.max(maxValue - minValue, 1);
+  const rawStep = range / Math.max(targetTickCount, 1);
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const normalized = rawStep / magnitude;
+
+  if (normalized <= 1) {
+    return 1 * magnitude;
+  }
+
+  if (normalized <= 2) {
+    return 2 * magnitude;
+  }
+
+  if (normalized <= 5) {
+    return 5 * magnitude;
+  }
+
+  return 10 * magnitude;
+}
+
 function formatNumber(value, digits = 1) {
   const numericValue = Number(value);
 
@@ -61,7 +92,7 @@ function getBounds(points) {
   return { center, span };
 }
 
-export default function WellTrajectoryViewer({ points }) {
+export default function WellTrajectoryViewer({ points, formations = [] }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
   const [pinnedPointIndex, setPinnedPointIndex] = useState(null);
   const hasEnoughPoints = Array.isArray(points) && points.length >= 2;
@@ -88,6 +119,96 @@ export default function WellTrajectoryViewer({ points }) {
     () => (hasEnoughPoints ? points.map((point) => [point.x, point.y, -point.z]) : []),
     [hasEnoughPoints, points],
   );
+
+  const { minTvd, maxTvd, tvdTicks } = useMemo(() => {
+    if (!hasEnoughPoints) {
+      return { minTvd: 0, maxTvd: 0, tvdTicks: [0] };
+    }
+
+    const tvdValues = points
+      .map((point) => toFiniteNumber(point.tvd ?? point.z))
+      .filter((value) => value !== null);
+
+    if (tvdValues.length === 0) {
+      return { minTvd: 0, maxTvd: 0, tvdTicks: [0] };
+    }
+
+    const localMinTvd = Math.min(...tvdValues);
+    const localMaxTvd = Math.max(...tvdValues);
+    const tickStep = getNiceTickStep(localMinTvd, localMaxTvd);
+    const firstTick = Math.floor(localMinTvd / tickStep) * tickStep;
+    const lastTick = Math.ceil(localMaxTvd / tickStep) * tickStep;
+    const ticks = [];
+
+    for (let tick = firstTick; tick <= lastTick + tickStep * 0.5; tick += tickStep) {
+      ticks.push(Number(tick.toFixed(6)));
+    }
+
+    return {
+      minTvd: localMinTvd,
+      maxTvd: localMaxTvd,
+      tvdTicks: ticks,
+    };
+  }, [hasEnoughPoints, points]);
+
+  const formationIntervals = useMemo(() => {
+    if (!hasEnoughPoints || !Array.isArray(formations) || formations.length === 0) {
+      return [];
+    }
+
+    return formations.reduce((acc, formation, formationIndex) => {
+      if (!formation || !formation.visible) {
+        return acc;
+      }
+
+      const topDepth = toFiniteNumber(formation.top);
+      const bottomDepth = toFiniteNumber(formation.bottom);
+
+      if (topDepth === null || bottomDepth === null) {
+        return acc;
+      }
+
+      const minDepth = Math.min(topDepth, bottomDepth);
+      const maxDepth = Math.max(topDepth, bottomDepth);
+      const segments = [];
+      let activeSegment = [];
+
+      points.forEach((point, pointIndex) => {
+        const pointTvd = toFiniteNumber(point.tvd ?? point.z);
+        const inInterval = pointTvd !== null && pointTvd >= minDepth && pointTvd <= maxDepth;
+
+        if (inInterval) {
+          activeSegment.push(linePoints[pointIndex]);
+          return;
+        }
+
+        if (activeSegment.length >= 2) {
+          segments.push(activeSegment);
+        }
+
+        activeSegment = [];
+      });
+
+      if (activeSegment.length >= 2) {
+        segments.push(activeSegment);
+      }
+
+      if (segments.length === 0) {
+        return acc;
+      }
+
+      acc.push({
+        id: formation.id ?? `formation-${formationIndex}`,
+        name: String(formation.name || `Formation ${formationIndex + 1}`),
+        color: formation.color || "#2f7d63",
+        top: minDepth,
+        bottom: maxDepth,
+        segments,
+      });
+
+      return acc;
+    }, []);
+  }, [formations, hasEnoughPoints, linePoints, points]);
 
   const activePointIndex = pinnedPointIndex ?? hoverPointIndex;
   const activePoint =
@@ -132,6 +253,17 @@ export default function WellTrajectoryViewer({ points }) {
         <gridHelper args={[span * 2, 20, "#688597", "#b6c3cc"]} />
 
         <Line points={linePoints} color="#0f7b8a" lineWidth={3} />
+
+        {formationIntervals.flatMap((formation) =>
+          formation.segments.map((segmentPoints, segmentIndex) => (
+            <Line
+              key={`${formation.id}-segment-${segmentIndex}`}
+              points={segmentPoints}
+              color={formation.color}
+              lineWidth={5}
+            />
+          )),
+        )}
 
         {linePoints.map((position, index) => (
           <mesh
@@ -250,6 +382,43 @@ export default function WellTrajectoryViewer({ points }) {
           </p>
         )}
       </section>
+
+      <section className="tvd-ruler" aria-label="TVD ruler">
+        <p className="tvd-ruler-title">TVD Ruler (ft)</p>
+        <div className="tvd-ruler-track">
+          {tvdTicks.map((tickValue) => {
+            const percent =
+              maxTvd === minTvd ? 0 : ((tickValue - minTvd) / Math.max(maxTvd - minTvd, 1)) * 100;
+            const clampedPercent = Math.max(0, Math.min(100, percent));
+
+            return (
+              <div key={`tvd-tick-${tickValue}`} className="tvd-tick" style={{ top: `${clampedPercent}%` }}>
+                <span className="tvd-tick-line" />
+                <span className="tvd-tick-label">{formatNumber(tickValue, 0)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <p className="tvd-ruler-range">
+          {formatNumber(minTvd, 0)} to {formatNumber(maxTvd, 0)}
+        </p>
+      </section>
+
+      {formationIntervals.length > 0 ? (
+        <section className="formation-legend" aria-label="Visible formations">
+          <p className="formation-legend-title">Visible Formations</p>
+          <ul className="formation-legend-list">
+            {formationIntervals.map((formation) => (
+              <li key={`legend-${formation.id}`}>
+                <span className="formation-legend-swatch" style={{ backgroundColor: formation.color }} />
+                <span>
+                  {formation.name}: {formatNumber(formation.top, 0)}-{formatNumber(formation.bottom, 0)} ft TVD
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="viewer-hint">Isometric view locked. Drag to rotate 360°, scroll to zoom, right-drag to pan.</div>
     </div>

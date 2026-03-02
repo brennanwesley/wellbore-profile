@@ -4,6 +4,8 @@ import { useCallback, useState } from "react";
 import WellTrajectoryViewer from "@/components/WellTrajectoryViewer";
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
 
+const DEFAULT_FORMATION_COLORS = ["#2f7d63", "#2c6e9f", "#a86d1e", "#8f3f3f", "#596f2a"];
+
 function hasMetadataValue(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
 }
@@ -38,14 +40,42 @@ const INITIAL_METADATA = {
   groundElevation: "",
 };
 
+function createFormationRow(index = 0) {
+  return {
+    id: `formation-${Date.now()}-${Math.round(Math.random() * 100000)}`,
+    name: "",
+    top: "",
+    bottom: "",
+    color: DEFAULT_FORMATION_COLORS[index % DEFAULT_FORMATION_COLORS.length],
+    visible: true,
+  };
+}
+
 export default function HomePage() {
   const [points, setPoints] = useState([]);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
+  const [formations, setFormations] = useState([]);
   const [detectedMetadata, setDetectedMetadata] = useState(null);
   const [fileStatus, setFileStatus] = useState(
     "Upload a survey file, map the required fields, then apply trajectory.",
   );
   const [importWarnings, setImportWarnings] = useState([]);
+
+  const addFormationRow = useCallback(() => {
+    setFormations((previous) => [...previous, createFormationRow(previous.length)]);
+  }, []);
+
+  const updateFormationField = useCallback((formationId, fieldName, value) => {
+    setFormations((previous) =>
+      previous.map((formation) =>
+        formation.id === formationId ? { ...formation, [fieldName]: value } : formation,
+      ),
+    );
+  }, []);
+
+  const removeFormationRow = useCallback((formationId) => {
+    setFormations((previous) => previous.filter((formation) => formation.id !== formationId));
+  }, []);
 
   const handleApplyTrajectory = useCallback(
     ({ points: mappedPoints, summary, sourceLabel, warnings, metadataSuggestions }) => {
@@ -160,11 +190,110 @@ export default function HomePage() {
           <p className="helper-note">Manual edits always override imported metadata suggestions.</p>
         </section>
 
+        <section className="formation-block" aria-label="Formation intervals">
+          <div className="formation-header">
+            <p className="metadata-title">Formation intervals (TVD ft)</p>
+            <button type="button" className="secondary-btn formation-add-btn" onClick={addFormationRow}>
+              Add formation
+            </button>
+          </div>
+
+          {formations.length === 0 ? (
+            <p className="helper-note">No formation intervals yet. Add rows to overlay intervals on trajectory.</p>
+          ) : (
+            <div className="formation-list">
+              {formations.map((formation, index) => (
+                <article key={formation.id} className="formation-row">
+                  <p className="formation-index">Formation {index + 1}</p>
+                  <div className="formation-grid">
+                    <label className="mapper-field" htmlFor={`formation-name-${formation.id}`}>
+                      <span>Name</span>
+                      <input
+                        id={`formation-name-${formation.id}`}
+                        type="text"
+                        className="mapper-input"
+                        value={formation.name}
+                        onChange={(event) => {
+                          updateFormationField(formation.id, "name", event.target.value);
+                        }}
+                        placeholder="e.g. Wolfcamp A"
+                      />
+                    </label>
+
+                    <label className="mapper-field" htmlFor={`formation-top-${formation.id}`}>
+                      <span>Top TVD (ft)</span>
+                      <input
+                        id={`formation-top-${formation.id}`}
+                        type="number"
+                        className="mapper-input"
+                        value={formation.top}
+                        onChange={(event) => {
+                          updateFormationField(formation.id, "top", event.target.value);
+                        }}
+                        placeholder="e.g. 8400"
+                      />
+                    </label>
+
+                    <label className="mapper-field" htmlFor={`formation-bottom-${formation.id}`}>
+                      <span>Bottom TVD (ft)</span>
+                      <input
+                        id={`formation-bottom-${formation.id}`}
+                        type="number"
+                        className="mapper-input"
+                        value={formation.bottom}
+                        onChange={(event) => {
+                          updateFormationField(formation.id, "bottom", event.target.value);
+                        }}
+                        placeholder="e.g. 9250"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="formation-row-actions">
+                    <label className="formation-visible-toggle" htmlFor={`formation-visible-${formation.id}`}>
+                      <input
+                        id={`formation-visible-${formation.id}`}
+                        type="checkbox"
+                        checked={Boolean(formation.visible)}
+                        onChange={(event) => {
+                          updateFormationField(formation.id, "visible", event.target.checked);
+                        }}
+                      />
+                      <span>Visible</span>
+                    </label>
+
+                    <label className="formation-color-field" htmlFor={`formation-color-${formation.id}`}>
+                      <span>Color</span>
+                      <input
+                        id={`formation-color-${formation.id}`}
+                        type="color"
+                        value={formation.color}
+                        onChange={(event) => {
+                          updateFormationField(formation.id, "color", event.target.value);
+                        }}
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      className="secondary-btn formation-remove-btn"
+                      onClick={() => removeFormationRow(formation.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
         <SurveyImportMapper onApplyTrajectory={handleApplyTrajectory} />
 
         <div className="helper-text">
           <p className="file-status">{fileStatus}</p>
           <p>Detected points: {points.length}</p>
+          <p>Formation rows: {formations.length}</p>
           {!hasEnoughPoints ? <p className="warning">Add at least 2 valid points to render.</p> : null}
           {importWarnings.map((warningText) => (
             <p key={warningText} className="warning">
@@ -175,7 +304,7 @@ export default function HomePage() {
       </section>
 
       <section className="panel viewer-panel">
-        <WellTrajectoryViewer points={points} />
+        <WellTrajectoryViewer points={points} formations={formations} />
       </section>
     </main>
   );

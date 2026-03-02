@@ -231,7 +231,7 @@ Each adder must support visibility toggle, color/style config, and quick edit/re
 - [x] ~~Implement isometric-only camera controls with continuous 360 azimuth rotation~~
 - [x] ~~Add click-to-pin point inspector with MD/TVD/N/E/DLS/Annotation~~
 
-- [ ] Add persistent TVD ruler/ticks
-- [ ] Add formation table rows (Name/Top/Bottom/Visible/Color) + trajectory interval overlay
+- [x] ~~Add persistent TVD ruler/ticks~~
+- [x] ~~Add formation table rows (Name/Top/Bottom/Visible/Color) + trajectory interval overlay~~
 - [ ] Add unit tests for import mapping, validation rules, and KPI metrics
 - [ ] Push completed slice to GitHub after validation; then mark the slice as `- [x] ~~...~~`
