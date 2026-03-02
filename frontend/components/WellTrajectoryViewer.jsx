@@ -5,9 +5,7 @@ import { Html, Line, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useState } from "react";
 
 const ISOMETRIC_POLAR_ANGLE = Math.acos(1 / Math.sqrt(3));
-const ISOMETRIC_POLAR_RANGE = Math.PI / 9;
-const MIN_ISOMETRIC_POLAR = Math.max(0.25, ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_RANGE);
-const MAX_ISOMETRIC_POLAR = Math.min(Math.PI / 2.15, ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_RANGE);
+const ISOMETRIC_POLAR_LOCK_EPSILON = 0.0001;
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -120,6 +118,24 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
     [hasEnoughPoints, points],
   );
 
+  const shallowestTvd = useMemo(() => {
+    if (!hasEnoughPoints) {
+      return 0;
+    }
+
+    const tvdValues = points
+      .map((point) => toFiniteNumber(point.tvd ?? point.z))
+      .filter((value) => value !== null);
+
+    if (tvdValues.length === 0) {
+      return 0;
+    }
+
+    return Math.min(...tvdValues);
+  }, [hasEnoughPoints, points]);
+
+  const surfaceGridZ = -shallowestTvd;
+
   const { minTvd, maxTvd, tvdTicks } = useMemo(() => {
     if (!hasEnoughPoints) {
       return { minTvd: 0, maxTvd: 0, tvdTicks: [0] };
@@ -227,6 +243,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const pointMarkerRadius = Math.max(span * 0.006, 1.6);
   const endpointRadius = Math.max(span * 0.018, 6);
   const axisLength = span * 0.8;
+  const axisOrigin = [center[0], center[1], surfaceGridZ];
 
   return (
     <div className="viewer-canvas">
@@ -247,10 +264,14 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         <ambientLight intensity={0.65} />
         <directionalLight position={[span, span, span]} intensity={1.1} />
 
-        <group position={center}>
+        <group position={axisOrigin}>
           <axesHelper args={[axisLength]} />
         </group>
-        <gridHelper args={[span * 2, 20, "#688597", "#b6c3cc"]} />
+        <gridHelper
+          args={[span * 2, 20, "#688597", "#b6c3cc"]}
+          position={[center[0], center[1], surfaceGridZ]}
+          rotation={[Math.PI / 2, 0, 0]}
+        />
 
         <Line points={linePoints} color="#0f7b8a" lineWidth={3} />
 
@@ -311,14 +332,14 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           </Html>
         ) : null}
 
-        <Html position={[center[0] + axisLength, center[1], center[2]]} center distanceFactor={20}>
-          <div className="axis-tag">E</div>
+        <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
+          <div className="axis-tag axis-tag-east">X / E</div>
         </Html>
-        <Html position={[center[0], center[1] + axisLength, center[2]]} center distanceFactor={20}>
-          <div className="axis-tag">N</div>
+        <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
+          <div className="axis-tag axis-tag-north">Y / N</div>
         </Html>
-        <Html position={[center[0], center[1], center[2] - axisLength]} center distanceFactor={20}>
-          <div className="axis-tag">TVD (+)</div>
+        <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
+          <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
         </Html>
 
         <OrbitControls
@@ -326,8 +347,8 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           target={center}
           enableDamping
           dampingFactor={0.08}
-          minPolarAngle={MIN_ISOMETRIC_POLAR}
-          maxPolarAngle={MAX_ISOMETRIC_POLAR}
+          minPolarAngle={ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON}
+          maxPolarAngle={ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON}
           minAzimuthAngle={-Infinity}
           maxAzimuthAngle={Infinity}
         />
@@ -420,7 +441,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         </section>
       ) : null}
 
-      <div className="viewer-hint">Isometric view locked. Drag to rotate 360°, scroll to zoom, right-drag to pan.</div>
+      <div className="viewer-hint">Isometric tilt locked. Drag to rotate full 360° azimuth, scroll to zoom, right-drag to pan.</div>
     </div>
   );
 }

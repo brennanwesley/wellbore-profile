@@ -40,6 +40,8 @@ const INITIAL_METADATA = {
   groundElevation: "",
 };
 
+const INITIAL_FILE_STATUS = "Upload a survey file, map the required fields, then apply trajectory.";
+
 function createFormationRow(index = 0) {
   return {
     id: `formation-${Date.now()}-${Math.round(Math.random() * 100000)}`,
@@ -55,10 +57,9 @@ export default function HomePage() {
   const [points, setPoints] = useState([]);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
   const [formations, setFormations] = useState([]);
+  const [importMapperKey, setImportMapperKey] = useState(0);
   const [detectedMetadata, setDetectedMetadata] = useState(null);
-  const [fileStatus, setFileStatus] = useState(
-    "Upload a survey file, map the required fields, then apply trajectory.",
-  );
+  const [fileStatus, setFileStatus] = useState(INITIAL_FILE_STATUS);
   const [importWarnings, setImportWarnings] = useState([]);
 
   const addFormationRow = useCallback(() => {
@@ -117,16 +118,32 @@ export default function HomePage() {
     });
   }, [detectedMetadata]);
 
+  const clearWorkspace = useCallback(() => {
+    setPoints([]);
+    setWellMetadata(INITIAL_METADATA);
+    setFormations([]);
+    setDetectedMetadata(null);
+    setFileStatus(INITIAL_FILE_STATUS);
+    setImportWarnings([]);
+    setImportMapperKey((previous) => previous + 1);
+  }, []);
+
   const hasEnoughPoints = points.length >= 2;
   const titleWellName = wellMetadata.wellName || "Manual Well Metadata";
 
   return (
     <main className="page-shell">
       <section className="panel control-panel">
-        <div>
-          <p className="well-name">{titleWellName}</p>
-          <h1>Wellbore Profile</h1>
-          <p className="subtitle">Phase 1: Format-agnostic survey mapper + isometric trajectory viewer</p>
+        <div className="title-row">
+          <div>
+            <p className="well-name">{titleWellName}</p>
+            <h1>Wellbore Profile</h1>
+            <p className="subtitle">Phase 1: Format-agnostic survey mapper + isometric trajectory viewer</p>
+          </div>
+
+          <button type="button" className="secondary-btn clear-workspace-btn" onClick={clearWorkspace}>
+            Clear Current Well
+          </button>
         </div>
 
         <section className="metadata-block" aria-label="Well metadata">
@@ -288,7 +305,7 @@ export default function HomePage() {
           )}
         </section>
 
-        <SurveyImportMapper onApplyTrajectory={handleApplyTrajectory} />
+        <SurveyImportMapper key={importMapperKey} onApplyTrajectory={handleApplyTrajectory} />
 
         <div className="helper-text">
           <p className="file-status">{fileStatus}</p>

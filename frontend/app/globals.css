@@ -25,11 +25,12 @@ body {
 }
 
 .page-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: grid;
   grid-template-columns: minmax(320px, 420px) 1fr;
   gap: 1rem;
   padding: 1rem;
+  overflow: hidden;
 }
 
 .panel {
@@ -44,6 +45,24 @@ body {
   flex-direction: column;
   gap: 0.9rem;
   padding: 1.1rem;
+  min-height: 0;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.clear-workspace-btn {
+  white-space: nowrap;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.78rem;
+  border: 1px solid #d2bc9d;
 }
 
 .well-name {
@@ -346,14 +365,15 @@ body {
 
 .viewer-panel {
   overflow: hidden;
-  min-height: 82vh;
+  min-height: 0;
+  height: calc(100vh - 2rem);
 }
 
 .viewer-canvas {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 82vh;
+  min-height: 0;
 }
 
 .depth-pill {
@@ -376,6 +396,21 @@ body {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+}
+
+.axis-tag-east {
+  border-color: #d86f66;
+  color: #a73b32;
+}
+
+.axis-tag-north {
+  border-color: #69a86d;
+  color: #356c37;
+}
+
+.axis-tag-tvd {
+  border-color: #6a8cbb;
+  color: #294e7d;
 }
 
 .viewer-hint {
@@ -567,7 +602,23 @@ body {
 
 @media (max-width: 980px) {
   .page-shell {
+    height: auto;
+    overflow: visible;
     grid-template-columns: 1fr;
+  }
+
+  .control-panel {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .title-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .clear-workspace-btn {
+    align-self: flex-start;
   }
 
   .inspector-card {
@@ -608,6 +659,7 @@ body {
   .viewer-panel,
   .viewer-canvas,
   .viewer-empty {
+    height: auto;
     min-height: 62vh;
   }
 }
