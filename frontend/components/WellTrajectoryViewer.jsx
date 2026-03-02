@@ -1,11 +1,20 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { Html, Line, OrbitControls } from "@react-three/drei";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Vector3 } from "three";
 
 const ISOMETRIC_POLAR_ANGLE = Math.acos(1 / Math.sqrt(3));
 const ISOMETRIC_POLAR_LOCK_EPSILON = 0.0001;
+const FREE_POLAR_MIN = 0.08;
+const FREE_POLAR_MAX = Math.PI - 0.08;
+
+const AXIS_VECTORS = {
+  x: [1, 0, 0],
+  y: [0, 1, 0],
+  z: [0, 0, 1],
+};
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -56,6 +65,10 @@ function formatAnnotation(value) {
   return text || "—";
 }
 
+function clamp(value, minValue, maxValue) {
+  return Math.min(Math.max(value, minValue), maxValue);
+}
+
 function getBounds(points) {
   const initial = {
     minX: Number.POSITIVE_INFINITY,
@@ -87,12 +100,44 @@ function getBounds(points) {
   const zSpan = bounds.maxZ - bounds.minZ;
   const span = Math.max(xSpan, ySpan, zSpan, 1);
 
-  return { center, span };
+  return { center, span, bounds };
+}
+
+function CameraSpinner({ controlsRef, enabled, axis = "z", speed = 0.45 }) {
+  const axisVector = useMemo(() => {
+    const axisValues = AXIS_VECTORS[axis] || AXIS_VECTORS.z;
+    return new Vector3(axisValues[0], axisValues[1], axisValues[2]).normalize();
+  }, [axis]);
+
+  useFrame((_, delta) => {
+    if (!enabled || !controlsRef.current) {
+      return;
+    }
+
+    const controls = controlsRef.current;
+    const camera = controls.object;
+    const target = controls.target;
+    const offset = camera.position.clone().sub(target);
+
+    offset.applyAxisAngle(axisVector, delta * speed);
+    camera.position.copy(target.clone().add(offset));
+    camera.lookAt(target);
+    controls.update();
+  });
+
+  return null;
 }
 
 export default function WellTrajectoryViewer({ points, formations = [] }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
   const [pinnedPointIndex, setPinnedPointIndex] = useState(null);
+  const [viewMode, setViewMode] = useState("isometric");
+  const [spinEnabled, setSpinEnabled] = useState(false);
+  const [spinAxis, setSpinAxis] = useState("z");
+  const [spinSpeed, setSpinSpeed] = useState(0.45);
+  const [viewerResetKey, setViewerResetKey] = useState(0);
+
+  const orbitControlsRef = useRef(null);
   const hasEnoughPoints = Array.isArray(points) && points.length >= 2;
 
   useEffect(() => {
@@ -105,9 +150,20 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
     }
   }, [hoverPointIndex, pinnedPointIndex, points.length]);
 
-  const { center, span } = useMemo(() => {
+  const { center, span, bounds } = useMemo(() => {
     if (!hasEnoughPoints) {
-      return { center: [0, 0, 0], span: 1 };
+      return {
+        center: [0, 0, 0],
+        span: 1,
+        bounds: {
+          minX: -0.5,
+          maxX: 0.5,
+          minY: -0.5,
+          maxY: 0.5,
+          minZ: -0.5,
+          maxZ: 0.5,
+        },
+      };
     }
 
     return getBounds(points);
@@ -167,6 +223,62 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
     };
   }, [hasEnoughPoints, points]);
 
+  const depthGuides = useMemo(() => {
+    if (!hasEnoughPoints || tvdTicks.length === 0) {
+      return [];
+    }
+
+    const mdTvdPairs = points
+      .map((point) => ({
+        md: toFiniteNumber(point.md),
+        tvd: toFiniteNumber(point.tvd ?? point.z),
+      }))
+      .filter((pair) => pair.md !== null && pair.tvd !== null);
+
+    if (mdTvdPairs.length === 0) {
+      return tvdTicks.map((tvdValue) => ({ tvd: tvdValue, md: null, z: -tvdValue }));
+    }
+
+    const estimateMdAtTvd = (targetTvd) => {
+      for (let index = 1; index < mdTvdPairs.length; index += 1) {
+        const previous = mdTvdPairs[index - 1];
+        const current = mdTvdPairs[index];
+        const minSegmentDepth = Math.min(previous.tvd, current.tvd);
+        const maxSegmentDepth = Math.max(previous.tvd, current.tvd);
+
+        if (targetTvd < minSegmentDepth || targetTvd > maxSegmentDepth) {
+          continue;
+        }
+
+        const depthDelta = current.tvd - previous.tvd;
+        if (Math.abs(depthDelta) < 1e-6) {
+          return current.md;
+        }
+
+        const ratio = (targetTvd - previous.tvd) / depthDelta;
+        return previous.md + ratio * (current.md - previous.md);
+      }
+
+      return mdTvdPairs.reduce(
+        (closest, pair) => {
+          const diff = Math.abs(pair.tvd - targetTvd);
+          if (diff < closest.diff) {
+            return { diff, md: pair.md };
+          }
+
+          return closest;
+        },
+        { diff: Number.POSITIVE_INFINITY, md: mdTvdPairs[mdTvdPairs.length - 1].md },
+      ).md;
+    };
+
+    return tvdTicks.map((tvdValue) => ({
+      tvd: tvdValue,
+      md: estimateMdAtTvd(tvdValue),
+      z: -tvdValue,
+    }));
+  }, [hasEnoughPoints, points, tvdTicks]);
+
   const formationIntervals = useMemo(() => {
     if (!hasEnoughPoints || !Array.isArray(formations) || formations.length === 0) {
       return [];
@@ -209,22 +321,28 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         segments.push(activeSegment);
       }
 
-      if (segments.length === 0) {
-        return acc;
-      }
+      const volumeSizeX = Math.max(bounds.maxX - bounds.minX + span * 0.25, span * 0.4);
+      const volumeSizeY = Math.max(bounds.maxY - bounds.minY + span * 0.25, span * 0.4);
+      const volumeThickness = Math.max(maxDepth - minDepth, Math.max(span * 0.01, 8));
+      const normalizedOpacity = clamp(toFiniteNumber(formation.opacity) ?? 0.22, 0.05, 0.9);
 
       acc.push({
         id: formation.id ?? `formation-${formationIndex}`,
         name: String(formation.name || `Formation ${formationIndex + 1}`),
         color: formation.color || "#2f7d63",
+        opacity: normalizedOpacity,
         top: minDepth,
         bottom: maxDepth,
         segments,
+        volume: {
+          position: [center[0], center[1], -(minDepth + maxDepth) / 2],
+          size: [volumeSizeX, volumeSizeY, volumeThickness],
+        },
       });
 
       return acc;
     }, []);
-  }, [formations, hasEnoughPoints, linePoints, points]);
+  }, [bounds.maxX, bounds.maxY, bounds.minX, bounds.minY, center, formations, hasEnoughPoints, linePoints, points, span]);
 
   const activePointIndex = pinnedPointIndex ?? hoverPointIndex;
   const activePoint =
@@ -236,6 +354,15 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
       ? linePoints[activePointIndex]
       : null;
 
+  const resetViewerCamera = useCallback(() => {
+    setViewerResetKey((previous) => previous + 1);
+    setSpinEnabled(false);
+    setHoverPointIndex(null);
+    setPinnedPointIndex(null);
+  }, []);
+
+  const usingIsometricMode = viewMode === "isometric";
+
   if (!hasEnoughPoints) {
     return <div className="viewer-empty">No valid trajectory to render yet.</div>;
   }
@@ -244,16 +371,26 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const endpointRadius = Math.max(span * 0.018, 6);
   const axisLength = span * 0.8;
   const axisOrigin = [center[0], center[1], surfaceGridZ];
+  const initialCameraPosition = [center[0] + span * 1.4, center[1] + span * 0.8, center[2] + span * 1.4];
+  const depthGuidePadding = Math.max(span * 0.08, 12);
+  const depthGuideXStart = bounds.minX - depthGuidePadding;
+  const depthGuideXEnd = bounds.maxX + depthGuidePadding;
+  const depthGuideYStart = bounds.minY - depthGuidePadding;
+  const depthGuideYEnd = bounds.maxY + depthGuidePadding;
+  const depthAxisX = axisOrigin[0] + Math.max(span * 0.07, 10);
+  const depthAxisY = axisOrigin[1] + Math.max(span * 0.07, 10);
+  const depthTickHalfWidth = Math.max(span * 0.014, 2);
 
   return (
     <div className="viewer-canvas">
       <Canvas
+        key={`viewer-${viewerResetKey}`}
         onPointerMissed={() => {
           setPinnedPointIndex(null);
           setHoverPointIndex(null);
         }}
         camera={{
-          position: [center[0] + span * 1.4, center[1] + span * 0.8, center[2] + span * 1.4],
+          position: initialCameraPosition,
           up: [0, 0, 1],
           fov: 50,
           near: 0.1,
@@ -273,7 +410,69 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           rotation={[Math.PI / 2, 0, 0]}
         />
 
+        {depthGuides.map((guide) => (
+          <group key={`depth-guide-${guide.tvd}`}>
+            <Line
+              points={[
+                [depthGuideXStart, center[1], guide.z],
+                [depthGuideXEnd, center[1], guide.z],
+              ]}
+              color="#c5d1d9"
+              lineWidth={1}
+            />
+            <Line
+              points={[
+                [center[0], depthGuideYStart, guide.z],
+                [center[0], depthGuideYEnd, guide.z],
+              ]}
+              color="#d1dce2"
+              lineWidth={1}
+            />
+            <Line
+              points={[
+                [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
+                [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
+              ]}
+              color="#4f6b7b"
+              lineWidth={1.6}
+            />
+            <Html
+              position={[depthAxisX + depthTickHalfWidth * 1.25, depthAxisY, guide.z]}
+              distanceFactor={24}
+            >
+              <div className="depth-axis-label">
+                TVD {formatNumber(guide.tvd, 0)} | MD {guide.md === null ? "—" : formatNumber(guide.md, 0)}
+              </div>
+            </Html>
+          </group>
+        ))}
+
+        <Line
+          points={[
+            [depthAxisX, depthAxisY, -minTvd],
+            [depthAxisX, depthAxisY, -maxTvd],
+          ]}
+          color="#3f6478"
+          lineWidth={2.4}
+        />
+
+        <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
+          <div className="depth-axis-title">TVD / MD</div>
+        </Html>
+
         <Line points={linePoints} color="#0f7b8a" lineWidth={3} />
+
+        {formationIntervals.map((formation) => (
+          <mesh key={`${formation.id}-volume`} position={formation.volume.position}>
+            <boxGeometry args={formation.volume.size} />
+            <meshStandardMaterial
+              color={formation.color}
+              transparent
+              opacity={formation.opacity}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
 
         {formationIntervals.flatMap((formation) =>
           formation.segments.map((segmentPoints, segmentIndex) => (
@@ -343,15 +542,22 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         </Html>
 
         <OrbitControls
+          ref={orbitControlsRef}
           makeDefault
           target={center}
           enableDamping
           dampingFactor={0.08}
-          minPolarAngle={ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON}
-          maxPolarAngle={ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON}
+          minPolarAngle={
+            usingIsometricMode ? ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MIN
+          }
+          maxPolarAngle={
+            usingIsometricMode ? ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MAX
+          }
           minAzimuthAngle={-Infinity}
           maxAzimuthAngle={Infinity}
         />
+
+        <CameraSpinner controlsRef={orbitControlsRef} enabled={spinEnabled} axis={spinAxis} speed={spinSpeed} />
       </Canvas>
 
       <section className="inspector-card" aria-live="polite">
@@ -404,27 +610,6 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         )}
       </section>
 
-      <section className="tvd-ruler" aria-label="TVD ruler">
-        <p className="tvd-ruler-title">TVD Ruler (ft)</p>
-        <div className="tvd-ruler-track">
-          {tvdTicks.map((tickValue) => {
-            const percent =
-              maxTvd === minTvd ? 0 : ((tickValue - minTvd) / Math.max(maxTvd - minTvd, 1)) * 100;
-            const clampedPercent = Math.max(0, Math.min(100, percent));
-
-            return (
-              <div key={`tvd-tick-${tickValue}`} className="tvd-tick" style={{ top: `${clampedPercent}%` }}>
-                <span className="tvd-tick-line" />
-                <span className="tvd-tick-label">{formatNumber(tickValue, 0)}</span>
-              </div>
-            );
-          })}
-        </div>
-        <p className="tvd-ruler-range">
-          {formatNumber(minTvd, 0)} to {formatNumber(maxTvd, 0)}
-        </p>
-      </section>
-
       {formationIntervals.length > 0 ? (
         <section className="formation-legend" aria-label="Visible formations">
           <p className="formation-legend-title">Visible Formations</p>
@@ -441,7 +626,68 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         </section>
       ) : null}
 
-      <div className="viewer-hint">Isometric tilt locked. Drag to rotate full 360° azimuth, scroll to zoom, right-drag to pan.</div>
+      <section className="viewer-toolbar" aria-label="Viewer toolbar">
+        <div className="viewer-toolbar-row">
+          <button
+            type="button"
+            className={`viewer-tool-btn ${usingIsometricMode ? "is-active" : ""}`}
+            onClick={() => setViewMode("isometric")}
+          >
+            Isometric
+          </button>
+          <button
+            type="button"
+            className={`viewer-tool-btn ${!usingIsometricMode ? "is-active" : ""}`}
+            onClick={() => setViewMode("free")}
+          >
+            Free Orbit
+          </button>
+          <button type="button" className="viewer-tool-btn" onClick={resetViewerCamera}>
+            Reset View
+          </button>
+        </div>
+
+        <div className="viewer-toolbar-row">
+          <button
+            type="button"
+            className={`viewer-tool-btn ${spinEnabled ? "is-active" : ""}`}
+            onClick={() => setSpinEnabled((previous) => !previous)}
+          >
+            {spinEnabled ? "Pause Spin" : "Start Spin"}
+          </button>
+
+          <label className="viewer-tool-label" htmlFor="spin-axis-select">
+            <span>Axis</span>
+            <select
+              id="spin-axis-select"
+              className="viewer-tool-select"
+              value={spinAxis}
+              onChange={(event) => setSpinAxis(event.target.value)}
+            >
+              <option value="x">X (Easting)</option>
+              <option value="y">Y (Northing)</option>
+              <option value="z">Z / TVD</option>
+            </select>
+          </label>
+
+          <label className="viewer-tool-label viewer-tool-speed" htmlFor="spin-speed-range">
+            <span>Speed ({spinSpeed.toFixed(2)} rad/s)</span>
+            <input
+              id="spin-speed-range"
+              type="range"
+              min="0.1"
+              max="1.5"
+              step="0.05"
+              value={spinSpeed}
+              onChange={(event) => setSpinSpeed(Number(event.target.value))}
+            />
+          </label>
+        </div>
+
+        <p className="viewer-toolbar-hint">
+          Left-drag rotate, scroll zoom, right-drag pan. Use Free Orbit for full tilt freedom.
+        </p>
+      </section>
     </div>
   );
 }

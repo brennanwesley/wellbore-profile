@@ -49,6 +49,7 @@ function createFormationRow(index = 0) {
     top: "",
     bottom: "",
     color: DEFAULT_FORMATION_COLORS[index % DEFAULT_FORMATION_COLORS.length],
+    opacity: 0.22,
     visible: true,
   };
 }
@@ -287,6 +288,21 @@ export default function HomePage() {
                         value={formation.color}
                         onChange={(event) => {
                           updateFormationField(formation.id, "color", event.target.value);
+                        }}
+                      />
+                    </label>
+
+                    <label className="formation-opacity-field" htmlFor={`formation-opacity-${formation.id}`}>
+                      <span>Opacity ({Math.round((Number(formation.opacity ?? 0.22) || 0.22) * 100)}%)</span>
+                      <input
+                        id={`formation-opacity-${formation.id}`}
+                        type="range"
+                        min="0.05"
+                        max="0.9"
+                        step="0.05"
+                        value={Number(formation.opacity ?? 0.22)}
+                        onChange={(event) => {
+                          updateFormationField(formation.id, "opacity", Number(event.target.value));
                         }}
                       />
                     </label>
