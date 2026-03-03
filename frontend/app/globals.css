@@ -496,16 +496,17 @@ body {
 }
 
 .depth-gridline-label {
-  background: rgba(18, 38, 48, 0.84);
-  border: 1px solid rgba(209, 226, 235, 0.95);
+  background: rgba(10, 24, 31, 0.92);
+  border: 2px solid rgba(229, 242, 248, 0.98);
   border-radius: 999px;
-  padding: 0.18rem 0.52rem;
-  color: #f4fbff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  padding: 0.3rem 0.72rem;
+  color: #f8fdff;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.015em;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(19, 35, 44, 0.3);
+  box-shadow: 0 6px 18px rgba(12, 25, 33, 0.38);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
 }
 
 .depth-axis-title {
