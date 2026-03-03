@@ -136,7 +136,6 @@ export default function HomePage() {
     <main className="page-shell">
       <section className="panel control-panel">
         <section className="metadata-block header-info-block" aria-label="Header information">
-          <p className="metadata-title">Header Info</p>
           <div className="header-info-title">
             <p className="well-name">{titleWellName}</p>
             <h1>Wellbore Profile</h1>

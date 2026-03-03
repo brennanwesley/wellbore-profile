@@ -441,7 +441,6 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
               <Html
                 position={[center[0], depthGuideLabelY, guide.z]}
                 center
-                distanceFactor={6}
               >
                 <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
               </Html>

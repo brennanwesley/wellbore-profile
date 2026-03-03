@@ -499,11 +499,12 @@ body {
   background: rgba(10, 24, 31, 0.92);
   border: 2px solid rgba(229, 242, 248, 0.98);
   border-radius: 999px;
-  padding: 0.3rem 0.72rem;
+  padding: 0.52rem 1.18rem;
   color: #f8fdff;
-  font-size: 0.98rem;
+  font-size: clamp(2.2rem, 3.4vw, 3.4rem);
   font-weight: 800;
   letter-spacing: 0.015em;
+  line-height: 1;
   white-space: nowrap;
   box-shadow: 0 6px 18px rgba(12, 25, 33, 0.38);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
@@ -868,6 +869,11 @@ body {
   .viewer-toolbar-row {
     justify-content: flex-start;
     gap: 0.34rem;
+  }
+
+  .depth-gridline-label {
+    font-size: clamp(1.5rem, 5.4vw, 2rem);
+    padding: 0.38rem 0.78rem;
   }
 
   .viewer-tool-speed input[type="range"] {
