@@ -380,7 +380,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const depthAxisX = axisOrigin[0] + Math.max(span * 0.07, 10);
   const depthAxisY = axisOrigin[1] + Math.max(span * 0.07, 10);
   const depthTickHalfWidth = Math.max(span * 0.014, 2);
-  const majorDepthLabelStep = Math.max(Math.round(depthGuides.length / 4), 1);
+  const depthGuideLabelInset = Math.max(span * 0.02, 6);
 
   return (
     <div className="viewer-canvas">
@@ -411,11 +411,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           rotation={[Math.PI / 2, 0, 0]}
         />
 
-        {depthGuides.map((guide, guideIndex) => {
-          const showMdLabel =
-            guide.md !== null &&
-            (guideIndex === 0 || guideIndex === depthGuides.length - 1 || guideIndex % majorDepthLabelStep === 0);
-
+        {depthGuides.map((guide) => {
           return (
             <group key={`depth-guide-${guide.tvd}`}>
               <Line
@@ -443,15 +439,11 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
                 lineWidth={1.6}
               />
               <Html
-                position={[depthAxisX + depthTickHalfWidth * 1.08, depthAxisY, guide.z]}
-                distanceFactor={24}
+                position={[depthGuideXStart + depthGuideLabelInset, center[1], guide.z]}
+                center
+                distanceFactor={14}
               >
-                <div className="depth-axis-label">
-                  <span className="depth-axis-value">TVD {formatNumber(Math.abs(guide.tvd), 0)}</span>
-                  {showMdLabel ? (
-                    <span className="depth-axis-subvalue">MD {formatNumber(Math.abs(guide.md), 0)}</span>
-                  ) : null}
-                </div>
+                <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
               </Html>
             </group>
           );
@@ -463,11 +455,11 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
             [depthAxisX, depthAxisY, -maxTvd],
           ]}
           color="#3f6478"
-          lineWidth={2.4}
+          lineWidth={1.9}
         />
 
         <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
-          <div className="depth-axis-title">TVD / MD</div>
+          <div className="depth-axis-title">TVD</div>
         </Html>
 
         <Line points={linePoints} color="#0f7b8a" lineWidth={3} />

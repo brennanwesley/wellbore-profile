@@ -495,30 +495,17 @@ body {
   color: #294e7d;
 }
 
-.depth-axis-label {
-  background: rgba(255, 252, 247, 0.94);
-  border: 1px solid #c8d5de;
-  border-radius: 10px;
-  padding: 0.14rem 0.38rem;
-  color: #355264;
-  font-size: 0.66rem;
+.depth-gridline-label {
+  background: rgba(18, 38, 48, 0.84);
+  border: 1px solid rgba(209, 226, 235, 0.95);
+  border-radius: 999px;
+  padding: 0.18rem 0.52rem;
+  color: #f4fbff;
+  font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.01em;
   white-space: nowrap;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.04rem;
-}
-
-.depth-axis-value {
-  line-height: 1.05;
-}
-
-.depth-axis-subvalue {
-  line-height: 1.05;
-  font-size: 0.6rem;
-  color: #5d7685;
-  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(19, 35, 44, 0.3);
 }
 
 .depth-axis-title {
