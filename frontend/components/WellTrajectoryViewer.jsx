@@ -131,6 +131,7 @@ function CameraSpinner({ controlsRef, enabled, axis = "z", speed = 0.45 }) {
 export default function WellTrajectoryViewer({ points, formations = [] }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
   const [pinnedPointIndex, setPinnedPointIndex] = useState(null);
+  const [showDepthLabels, setShowDepthLabels] = useState(true);
   const [viewMode, setViewMode] = useState("isometric");
   const [spinEnabled, setSpinEnabled] = useState(false);
   const [spinAxis, setSpinAxis] = useState("z");
@@ -380,7 +381,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const depthAxisX = axisOrigin[0] + Math.max(span * 0.07, 10);
   const depthAxisY = axisOrigin[1] + Math.max(span * 0.07, 10);
   const depthTickHalfWidth = Math.max(span * 0.014, 2);
-  const depthGuideLabelX = depthGuideXEnd - Math.max(depthGuidePadding * 0.28, 6);
+  const depthGuideLabelX = depthGuideXEnd + Math.max(depthGuidePadding * 0.12, 4);
   const depthGuideLabelY = center[1];
 
   return (
@@ -439,12 +440,14 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
                 color="#4f6b7b"
                 lineWidth={1.6}
               />
-              <Html
-                position={[depthGuideLabelX, depthGuideLabelY, guide.z]}
-                center
-              >
-                <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
-              </Html>
+              {showDepthLabels ? (
+                <Html
+                  position={[depthGuideLabelX, depthGuideLabelY, guide.z]}
+                  center
+                >
+                  <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
+                </Html>
+              ) : null}
             </group>
           );
         })}
@@ -646,6 +649,13 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           </button>
           <button type="button" className="viewer-tool-btn" onClick={resetViewerCamera}>
             Reset View
+          </button>
+          <button
+            type="button"
+            className={`viewer-tool-btn ${showDepthLabels ? "is-active" : ""}`}
+            onClick={() => setShowDepthLabels((previous) => !previous)}
+          >
+            {showDepthLabels ? "Hide TVD Labels" : "Show TVD Labels"}
           </button>
         </div>
 
