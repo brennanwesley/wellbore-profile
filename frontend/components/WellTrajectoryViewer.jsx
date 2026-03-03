@@ -380,6 +380,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const depthAxisX = axisOrigin[0] + Math.max(span * 0.07, 10);
   const depthAxisY = axisOrigin[1] + Math.max(span * 0.07, 10);
   const depthTickHalfWidth = Math.max(span * 0.014, 2);
+  const majorDepthLabelStep = Math.max(Math.round(depthGuides.length / 4), 1);
 
   return (
     <div className="viewer-canvas">
@@ -410,42 +411,51 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           rotation={[Math.PI / 2, 0, 0]}
         />
 
-        {depthGuides.map((guide) => (
-          <group key={`depth-guide-${guide.tvd}`}>
-            <Line
-              points={[
-                [depthGuideXStart, center[1], guide.z],
-                [depthGuideXEnd, center[1], guide.z],
-              ]}
-              color="#c5d1d9"
-              lineWidth={1}
-            />
-            <Line
-              points={[
-                [center[0], depthGuideYStart, guide.z],
-                [center[0], depthGuideYEnd, guide.z],
-              ]}
-              color="#d1dce2"
-              lineWidth={1}
-            />
-            <Line
-              points={[
-                [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
-                [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
-              ]}
-              color="#4f6b7b"
-              lineWidth={1.6}
-            />
-            <Html
-              position={[depthAxisX + depthTickHalfWidth * 1.25, depthAxisY, guide.z]}
-              distanceFactor={24}
-            >
-              <div className="depth-axis-label">
-                TVD {formatNumber(guide.tvd, 0)} | MD {guide.md === null ? "—" : formatNumber(guide.md, 0)}
-              </div>
-            </Html>
-          </group>
-        ))}
+        {depthGuides.map((guide, guideIndex) => {
+          const showMdLabel =
+            guide.md !== null &&
+            (guideIndex === 0 || guideIndex === depthGuides.length - 1 || guideIndex % majorDepthLabelStep === 0);
+
+          return (
+            <group key={`depth-guide-${guide.tvd}`}>
+              <Line
+                points={[
+                  [depthGuideXStart, center[1], guide.z],
+                  [depthGuideXEnd, center[1], guide.z],
+                ]}
+                color="#c5d1d9"
+                lineWidth={1}
+              />
+              <Line
+                points={[
+                  [center[0], depthGuideYStart, guide.z],
+                  [center[0], depthGuideYEnd, guide.z],
+                ]}
+                color="#d1dce2"
+                lineWidth={1}
+              />
+              <Line
+                points={[
+                  [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
+                  [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
+                ]}
+                color="#4f6b7b"
+                lineWidth={1.6}
+              />
+              <Html
+                position={[depthAxisX + depthTickHalfWidth * 1.08, depthAxisY, guide.z]}
+                distanceFactor={24}
+              >
+                <div className="depth-axis-label">
+                  <span className="depth-axis-value">TVD {formatNumber(Math.abs(guide.tvd), 0)}</span>
+                  {showMdLabel ? (
+                    <span className="depth-axis-subvalue">MD {formatNumber(Math.abs(guide.md), 0)}</span>
+                  ) : null}
+                </div>
+              </Html>
+            </group>
+          );
+        })}
 
         <Line
           points={[

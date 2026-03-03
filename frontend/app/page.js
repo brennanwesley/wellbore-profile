@@ -130,25 +130,18 @@ export default function HomePage() {
   }, []);
 
   const hasEnoughPoints = points.length >= 2;
-  const titleWellName = wellMetadata.wellName || "Manual Well Metadata";
+  const titleWellName = wellMetadata.wellName || "Upload Directional Survey";
 
   return (
     <main className="page-shell">
       <section className="panel control-panel">
-        <div className="title-row">
-          <div>
+        <section className="metadata-block header-info-block" aria-label="Header information">
+          <p className="metadata-title">Header Info</p>
+          <div className="header-info-title">
             <p className="well-name">{titleWellName}</p>
             <h1>Wellbore Profile</h1>
             <p className="subtitle">Phase 1: Format-agnostic survey mapper + isometric trajectory viewer</p>
           </div>
-
-          <button type="button" className="secondary-btn clear-workspace-btn" onClick={clearWorkspace}>
-            Clear Current Well
-          </button>
-        </div>
-
-        <section className="metadata-block" aria-label="Well metadata">
-          <p className="metadata-title">Well metadata (manual override)</p>
 
           <div className="metadata-grid">
             <label className="mapper-field" htmlFor="well-name-input">
@@ -162,10 +155,12 @@ export default function HomePage() {
                   const value = event.target.value;
                   setWellMetadata((previous) => ({ ...previous, wellName: value }));
                 }}
-                placeholder="Enter well name"
+                placeholder="Upload Directional Survey"
               />
             </label>
+          </div>
 
+          <div className="metadata-grid metadata-grid-two-up">
             <label className="mapper-field" htmlFor="kelly-bushing-input">
               <span>Kelly Bushing (ft)</span>
               <input
@@ -208,9 +203,11 @@ export default function HomePage() {
           <p className="helper-note">Manual edits always override imported metadata suggestions.</p>
         </section>
 
+        <SurveyImportMapper key={importMapperKey} onApplyTrajectory={handleApplyTrajectory} />
+
         <section className="formation-block" aria-label="Formation intervals">
           <div className="formation-header">
-            <p className="metadata-title">Formation intervals (TVD ft)</p>
+            <p className="metadata-title">Formation Intervals TVD (ft)</p>
             <button type="button" className="secondary-btn formation-add-btn" onClick={addFormationRow}>
               Add formation
             </button>
@@ -321,7 +318,9 @@ export default function HomePage() {
           )}
         </section>
 
-        <SurveyImportMapper key={importMapperKey} onApplyTrajectory={handleApplyTrajectory} />
+        <button type="button" className="secondary-btn clear-workspace-btn" onClick={clearWorkspace}>
+          Clear Current Well
+        </button>
 
         <div className="helper-text">
           <p className="file-status">{fileStatus}</p>

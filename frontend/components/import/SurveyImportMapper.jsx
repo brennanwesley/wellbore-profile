@@ -66,6 +66,7 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
   });
   const [validationResult, setValidationResult] = useState(null);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
+  const [isReviewExpanded, setIsReviewExpanded] = useState(true);
 
   const rowCount = rows.length;
   const detectedHeaderRowIndex = useMemo(() => detectHeaderRowIndex(rows), [rows]);
@@ -218,231 +219,251 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
   }, [metadataSuggestions, onApplyTrajectory, sourceLabel, validationResult]);
 
   return (
-    <section className="import-block" aria-label="Survey import mapper">
-      <div className="import-toolbar">
-        <label className="secondary-btn file-input-btn" htmlFor="survey-file-input">
-          Upload CSV/TXT
-        </label>
-        <input
-          id="survey-file-input"
-          type="file"
-          accept=".csv,.txt,text/csv,text/plain"
-          onChange={handleFileUpload}
-          className="file-input"
-        />
+    <section className="import-block" aria-label="Directional survey import">
+      <section className="metadata-block import-upload-block" aria-label="Upload directional survey">
+        <p className="metadata-title">Upload Directional Survey</p>
+        <div className="import-toolbar import-upload-toolbar">
+          <label className="secondary-btn file-input-btn" htmlFor="survey-file-input">
+            Upload Survey
+          </label>
+          <input
+            id="survey-file-input"
+            type="file"
+            accept=".csv,.txt,text/csv,text/plain"
+            onChange={handleFileUpload}
+            className="file-input"
+          />
+          <button
+            type="button"
+            onClick={handleLoadSample}
+            className="secondary-btn"
+            disabled={isLoadingSample}
+          >
+            {isLoadingSample ? "Loading Sample..." : "Load Sample File"}
+          </button>
+        </div>
+        <p className="import-source">{sourceLabel}</p>
+      </section>
+
+      <section className="metadata-block import-review-block" aria-label="Survey review">
         <button
           type="button"
-          onClick={handleLoadSample}
-          className="secondary-btn"
-          disabled={isLoadingSample}
+          className="section-toggle"
+          aria-expanded={isReviewExpanded}
+          onClick={() => setIsReviewExpanded((previous) => !previous)}
         >
-          {isLoadingSample ? "Loading Sample..." : "Load Sample File"}
+          <span className="section-toggle-title">Survey Review</span>
+          <span className={`section-toggle-icon ${isReviewExpanded ? "is-open" : ""}`} aria-hidden="true">
+            ▾
+          </span>
         </button>
-      </div>
 
-      <p className="import-source">{sourceLabel}</p>
-
-      <label className="label" htmlFor="table-paste-input">
-        Paste full survey table text (optional)
-      </label>
-      <textarea
-        id="table-paste-input"
-        className="coordinate-input"
-        value={rawTableText}
-        onChange={(event) => setRawTableText(event.target.value)}
-        spellCheck={false}
-        placeholder="Paste CSV table here"
-      />
-
-      <div className="actions">
-        <button type="button" onClick={handleParsePasted} className="primary-btn">
-          Parse Table
-        </button>
-        <button type="button" onClick={handleAutoMap} className="secondary-btn" disabled={!rowCount}>
-          Auto-Map Fields
-        </button>
-      </div>
-
-      <div className="helper-text">
-        <p className="file-status">Rows detected: {rowCount}</p>
-        {hasMetadataSuggestions(metadataSuggestions) ? (
-          <p className="helper-note">
-            Metadata detected: {metadataSuggestions.wellName ? `Well Name` : null}
-            {metadataSuggestions.wellName && metadataSuggestions.kellyBushing !== null ? ", " : null}
-            {metadataSuggestions.kellyBushing !== null ? "Kelly Bushing" : null}
-            {(metadataSuggestions.wellName || metadataSuggestions.kellyBushing !== null) &&
-            metadataSuggestions.groundElevation !== null
-              ? ", "
-              : null}
-            {metadataSuggestions.groundElevation !== null ? "Ground Elevation" : null}
-          </p>
-        ) : null}
-        {parseErrors.length > 0 ? (
-          <ul className="warning-list">
-            {parseErrors.slice(0, 4).map((errorMessage) => (
-              <li key={errorMessage} className="warning">
-                {errorMessage}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-
-      {rowCount > 0 ? (
-        <>
-          <div className="mapper-controls">
-            <label className="mapper-field">
-              <span>Header mode</span>
-              <select
-                value={headerMode}
-                onChange={(event) => {
-                  setHeaderMode(event.target.value);
-                  setValidationResult(null);
-                }}
-                className="mapper-select"
-              >
-                <option value="auto">Auto detect</option>
-                <option value="manual">Manual row</option>
-                <option value="none">No header row</option>
-              </select>
+        {isReviewExpanded ? (
+          <div className="survey-review-shell">
+            <label className="label" htmlFor="table-paste-input">
+              Paste full survey table text (optional)
             </label>
+            <textarea
+              id="table-paste-input"
+              className="coordinate-input"
+              value={rawTableText}
+              onChange={(event) => setRawTableText(event.target.value)}
+              spellCheck={false}
+              placeholder="Paste CSV table here"
+            />
 
-            {headerMode === "manual" ? (
-              <label className="mapper-field">
-                <span>Header row (1-based)</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={rowCount}
-                  value={manualHeaderRow}
-                  onChange={(event) => {
-                    setManualHeaderRow(event.target.value);
-                    setValidationResult(null);
-                  }}
-                  className="mapper-input"
-                />
-              </label>
-            ) : null}
+            <div className="actions">
+              <button type="button" onClick={handleParsePasted} className="primary-btn">
+                Parse Table
+              </button>
+              <button type="button" onClick={handleAutoMap} className="secondary-btn" disabled={!rowCount}>
+                Auto-Map Fields
+              </button>
+            </div>
 
-            <label className="mapper-field">
-              <span>Data starts at row (1-based)</span>
-              <input
-                type="number"
-                min={1}
-                max={rowCount}
-                value={dataStartRow}
-                onChange={(event) => {
-                  setDataStartRow(event.target.value);
-                  setValidationResult(null);
-                }}
-                className="mapper-input"
-              />
-            </label>
-          </div>
-
-          <p className="helper-note">
-            Effective header row: {effectiveHeaderRowIndex === null ? "None" : effectiveHeaderRowIndex + 1}
-          </p>
-
-          <div className="mapping-grid" role="group" aria-label="Field mappings">
-            {MAPPING_FIELDS.map((field) => (
-              <label key={field.key} className="mapping-row">
-                <span>
-                  {field.label}
-                  {field.required ? " *" : ""}
-                </span>
-                <select
-                  value={mappings[field.key] ?? ""}
-                  onChange={(event) => handleMappingChange(field.key, event.target.value)}
-                  className="mapper-select"
-                >
-                  <option value="">Not mapped</option>
-                  {columnOptions.map((columnOption) => (
-                    <option key={`${field.key}-${columnOption.index}`} value={columnOption.index}>
-                      {columnOption.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
-
-          <div className="actions">
-            <button type="button" onClick={handleValidate} className="primary-btn">
-              Validate Mapping
-            </button>
-            <button
-              type="button"
-              onClick={handleApply}
-              className="secondary-btn"
-              disabled={!validationResult?.canApply}
-            >
-              Apply Trajectory
-            </button>
-          </div>
-
-          {validationResult ? (
             <div className="helper-text">
-              <p className="file-status">
-                Valid rows: {validationResult.summary.validRowCount} / Scanned rows: {validationResult.summary.totalRowsScanned}
-              </p>
-              {validationResult.fatalErrors.length > 0 ? (
-                <ul className="warning-list">
-                  {validationResult.fatalErrors.map((error) => (
-                    <li key={error} className="warning">
-                      {error}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              {validationResult.warnings.length > 0 ? (
-                <ul className="warning-list">
-                  {validationResult.warnings.map((warningMessage) => (
-                    <li key={warningMessage} className="warning">
-                      {warningMessage}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-
-              {validationResult.invalidRows.length > 0 ? (
-                <p>
-                  First invalid row: #{validationResult.invalidRows[0].rowNumber} - {validationResult.invalidRows[0].reason}
+              <p className="file-status">Rows detected: {rowCount}</p>
+              {hasMetadataSuggestions(metadataSuggestions) ? (
+                <p className="helper-note">
+                  Metadata detected: {metadataSuggestions.wellName ? `Well Name` : null}
+                  {metadataSuggestions.wellName && metadataSuggestions.kellyBushing !== null ? ", " : null}
+                  {metadataSuggestions.kellyBushing !== null ? "Kelly Bushing" : null}
+                  {(metadataSuggestions.wellName || metadataSuggestions.kellyBushing !== null) &&
+                  metadataSuggestions.groundElevation !== null
+                    ? ", "
+                    : null}
+                  {metadataSuggestions.groundElevation !== null ? "Ground Elevation" : null}
                 </p>
               ) : null}
-            </div>
-          ) : null}
-
-          <div className="preview-shell">
-            <p className="preview-title">Preview (first {PREVIEW_ROW_COUNT} rows from data start)</p>
-            <div className="preview-table-wrap">
-              <table className="preview-table">
-                <thead>
-                  <tr>
-                    <th>Row</th>
-                    {columnOptions.map((columnOption) => (
-                      <th key={`preview-head-${columnOption.index}`}>{columnOption.label}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewRows.map((row, previewIndex) => (
-                    <tr key={`preview-row-${dataStartRowIndex + previewIndex}`}>
-                      <td>{dataStartRowIndex + previewIndex + 1}</td>
-                      {columnOptions.map((columnOption) => (
-                        <td key={`preview-cell-${previewIndex}-${columnOption.index}`}>
-                          {row[columnOption.index] || ""}
-                        </td>
-                      ))}
-                    </tr>
+              {parseErrors.length > 0 ? (
+                <ul className="warning-list">
+                  {parseErrors.slice(0, 4).map((errorMessage) => (
+                    <li key={errorMessage} className="warning">
+                      {errorMessage}
+                    </li>
                   ))}
-                </tbody>
-              </table>
+                </ul>
+              ) : null}
             </div>
+
+            {rowCount > 0 ? (
+              <>
+                <div className="mapper-controls">
+                  <label className="mapper-field">
+                    <span>Header mode</span>
+                    <select
+                      value={headerMode}
+                      onChange={(event) => {
+                        setHeaderMode(event.target.value);
+                        setValidationResult(null);
+                      }}
+                      className="mapper-select"
+                    >
+                      <option value="auto">Auto detect</option>
+                      <option value="manual">Manual row</option>
+                      <option value="none">No header row</option>
+                    </select>
+                  </label>
+
+                  {headerMode === "manual" ? (
+                    <label className="mapper-field">
+                      <span>Header row (1-based)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={rowCount}
+                        value={manualHeaderRow}
+                        onChange={(event) => {
+                          setManualHeaderRow(event.target.value);
+                          setValidationResult(null);
+                        }}
+                        className="mapper-input"
+                      />
+                    </label>
+                  ) : null}
+
+                  <label className="mapper-field">
+                    <span>Data starts at row (1-based)</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={rowCount}
+                      value={dataStartRow}
+                      onChange={(event) => {
+                        setDataStartRow(event.target.value);
+                        setValidationResult(null);
+                      }}
+                      className="mapper-input"
+                    />
+                  </label>
+                </div>
+
+                <p className="helper-note">
+                  Effective header row: {effectiveHeaderRowIndex === null ? "None" : effectiveHeaderRowIndex + 1}
+                </p>
+
+                <div className="mapping-grid" role="group" aria-label="Field mappings">
+                  {MAPPING_FIELDS.map((field) => (
+                    <label key={field.key} className="mapping-row">
+                      <span>
+                        {field.label}
+                        {field.required ? " *" : ""}
+                      </span>
+                      <select
+                        value={mappings[field.key] ?? ""}
+                        onChange={(event) => handleMappingChange(field.key, event.target.value)}
+                        className="mapper-select"
+                      >
+                        <option value="">Not mapped</option>
+                        {columnOptions.map((columnOption) => (
+                          <option key={`${field.key}-${columnOption.index}`} value={columnOption.index}>
+                            {columnOption.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="actions">
+                  <button type="button" onClick={handleValidate} className="primary-btn">
+                    Validate Mapping
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleApply}
+                    className="secondary-btn"
+                    disabled={!validationResult?.canApply}
+                  >
+                    Apply Trajectory
+                  </button>
+                </div>
+
+                {validationResult ? (
+                  <div className="helper-text">
+                    <p className="file-status">
+                      Valid rows: {validationResult.summary.validRowCount} / Scanned rows: {validationResult.summary.totalRowsScanned}
+                    </p>
+                    {validationResult.fatalErrors.length > 0 ? (
+                      <ul className="warning-list">
+                        {validationResult.fatalErrors.map((error) => (
+                          <li key={error} className="warning">
+                            {error}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    {validationResult.warnings.length > 0 ? (
+                      <ul className="warning-list">
+                        {validationResult.warnings.map((warningMessage) => (
+                          <li key={warningMessage} className="warning">
+                            {warningMessage}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    {validationResult.invalidRows.length > 0 ? (
+                      <p>
+                        First invalid row: #{validationResult.invalidRows[0].rowNumber} - {validationResult.invalidRows[0].reason}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div className="preview-shell">
+                  <p className="preview-title">Preview (first {PREVIEW_ROW_COUNT} rows from data start)</p>
+                  <div className="preview-table-wrap">
+                    <table className="preview-table">
+                      <thead>
+                        <tr>
+                          <th>Row</th>
+                          {columnOptions.map((columnOption) => (
+                            <th key={`preview-head-${columnOption.index}`}>{columnOption.label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewRows.map((row, previewIndex) => (
+                          <tr key={`preview-row-${dataStartRowIndex + previewIndex}`}>
+                            <td>{dataStartRowIndex + previewIndex + 1}</td>
+                            {columnOptions.map((columnOption) => (
+                              <td key={`preview-cell-${previewIndex}-${columnOption.index}`}>
+                                {row[columnOption.index] || ""}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </div>
-        </>
-      ) : null}
+        ) : null}
+      </section>
     </section>
   );
 }
