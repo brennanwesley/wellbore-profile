@@ -140,7 +140,6 @@ export default function HomePage() {
           <div className="header-info-title">
             <p className="well-name">{titleWellName}</p>
             <h1>Wellbore Profile</h1>
-            <p className="subtitle">Phase 1: Format-agnostic survey mapper + isometric trajectory viewer</p>
           </div>
 
           <div className="metadata-grid">

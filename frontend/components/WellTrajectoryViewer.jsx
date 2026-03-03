@@ -380,7 +380,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const depthAxisX = axisOrigin[0] + Math.max(span * 0.07, 10);
   const depthAxisY = axisOrigin[1] + Math.max(span * 0.07, 10);
   const depthTickHalfWidth = Math.max(span * 0.014, 2);
-  const depthGuideLabelInset = Math.max(span * 0.02, 6);
+  const depthGuideLabelY = center[1];
 
   return (
     <div className="viewer-canvas">
@@ -439,9 +439,9 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
                 lineWidth={1.6}
               />
               <Html
-                position={[depthGuideXStart + depthGuideLabelInset, center[1], guide.z]}
+                position={[center[0], depthGuideLabelY, guide.z]}
                 center
-                distanceFactor={14}
+                distanceFactor={6}
               >
                 <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
               </Html>
