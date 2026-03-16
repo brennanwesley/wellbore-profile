@@ -16,6 +16,9 @@ const AXIS_VECTORS = {
   z: [0, 0, 1],
 };
 
+const COARSE_DEPTH_GUIDE_STEP = 1000;
+const FINE_DEPTH_GUIDE_STEP = 20;
+
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
   if (!cleaned) {
@@ -24,27 +27,6 @@ function toFiniteNumber(value) {
 
   const numericValue = Number(cleaned);
   return Number.isFinite(numericValue) ? numericValue : null;
-}
-
-function getNiceTickStep(minValue, maxValue, targetTickCount = 6) {
-  const range = Math.max(maxValue - minValue, 1);
-  const rawStep = range / Math.max(targetTickCount, 1);
-  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
-  const normalized = rawStep / magnitude;
-
-  if (normalized <= 1) {
-    return 1 * magnitude;
-  }
-
-  if (normalized <= 2) {
-    return 2 * magnitude;
-  }
-
-  if (normalized <= 5) {
-    return 5 * magnitude;
-  }
-
-  return 10 * magnitude;
 }
 
 function formatNumber(value, digits = 1) {
@@ -137,6 +119,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
   const [spinAxis, setSpinAxis] = useState("z");
   const [spinSpeed, setSpinSpeed] = useState(0.45);
   const [viewerResetKey, setViewerResetKey] = useState(0);
+  const [depthGuideStep, setDepthGuideStep] = useState(COARSE_DEPTH_GUIDE_STEP);
 
   const orbitControlsRef = useRef(null);
   const hasEnoughPoints = Array.isArray(points) && points.length >= 2;
@@ -208,7 +191,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
 
     const localMinTvd = Math.min(...tvdValues);
     const localMaxTvd = Math.max(...tvdValues);
-    const tickStep = getNiceTickStep(localMinTvd, localMaxTvd);
+    const tickStep = depthGuideStep;
     const firstTick = Math.floor(localMinTvd / tickStep) * tickStep;
     const lastTick = Math.ceil(localMaxTvd / tickStep) * tickStep;
     const ticks = [];
@@ -222,7 +205,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
       maxTvd: localMaxTvd,
       tvdTicks: ticks,
     };
-  }, [hasEnoughPoints, points]);
+  }, [depthGuideStep, hasEnoughPoints, points]);
 
   const depthGuides = useMemo(() => {
     if (!hasEnoughPoints || tvdTicks.length === 0) {
@@ -649,6 +632,20 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           </button>
           <button type="button" className="viewer-tool-btn" onClick={resetViewerCamera}>
             Reset View
+          </button>
+          <button
+            type="button"
+            className={`viewer-tool-btn ${depthGuideStep === COARSE_DEPTH_GUIDE_STEP ? "is-active" : ""}`}
+            onClick={() => setDepthGuideStep(COARSE_DEPTH_GUIDE_STEP)}
+          >
+            1000 ft Scale
+          </button>
+          <button
+            type="button"
+            className={`viewer-tool-btn ${depthGuideStep === FINE_DEPTH_GUIDE_STEP ? "is-active" : ""}`}
+            onClick={() => setDepthGuideStep(FINE_DEPTH_GUIDE_STEP)}
+          >
+            20 ft Scale
           </button>
           <button
             type="button"
