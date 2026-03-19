@@ -872,30 +872,59 @@ body {
   margin: 0;
 }
 
-.lateral-profile-summary {
+.lateral-profile-body {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
+  gap: 0.65rem;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.lateral-profile-stat {
+.lateral-profile-info-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.lateral-profile-card {
   border: 1px solid #dbcdb4;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
-  padding: 0.45rem 0.5rem;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.5rem 0.56rem;
 }
 
-.lateral-profile-stat span {
-  display: block;
+.lateral-profile-card-title {
+  margin: 0;
   font-size: 0.69rem;
+  font-weight: 800;
   color: #5d6f79;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.lateral-profile-stat strong {
-  display: block;
-  margin-top: 0.16rem;
-  font-size: 0.82rem;
+.lateral-profile-card-value {
+  margin: 0.18rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 800;
   color: #1f3443;
+}
+
+.lateral-profile-card-detail {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #1f3443;
+  font-weight: 700;
+}
+
+.lateral-profile-plot-panel {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
 }
 
 .lateral-profile-chart-shell {
@@ -984,32 +1013,6 @@ body {
 .lateral-profile-point.is-deepest {
   fill: #c65042;
   stroke: #7b241c;
-}
-
-.lateral-profile-readout {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
-}
-
-.lateral-profile-readout > div {
-  border: 1px solid #dbcdb4;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
-  padding: 0.46rem 0.52rem;
-}
-
-.lateral-profile-readout-title {
-  margin: 0;
-  font-size: 0.7rem;
-  color: #5d6f79;
-}
-
-.lateral-profile-readout-value {
-  margin: 0.2rem 0 0;
-  font-size: 0.79rem;
-  color: #1f3443;
-  font-weight: 700;
 }
 
 .lateral-profile-empty {
@@ -1128,14 +1131,22 @@ body {
     min-height: 340px;
   }
 
-  .lateral-profile-summary,
-  .lateral-profile-readout {
-    grid-template-columns: 1fr 1fr;
+  .lateral-profile-body {
+    grid-template-columns: 1fr;
   }
 
   .lateral-profile-start-field {
     max-width: 100%;
     width: 100%;
+  }
+
+  .lateral-profile-info-rail {
+    overflow: visible;
+    max-height: none;
+  }
+
+  .lateral-profile-plot-panel {
+    min-height: 260px;
   }
 
   .viewer-panel,

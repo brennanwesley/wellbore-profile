@@ -274,171 +274,175 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
 
       {inputError ? <p className="warning lateral-profile-message">{inputError}</p> : null}
 
-      <div className="lateral-profile-summary">
-        <article className="lateral-profile-stat">
-          <span>Visible MD Window</span>
-          <strong>
-            {formatNumber(appliedStartMd, 0)} - {formatNumber(chartMetrics?.maxMd, 0)} ft
-          </strong>
-        </article>
-        <article className="lateral-profile-stat">
-          <span>Visible Points</span>
-          <strong>{profilePoints.length}</strong>
-        </article>
-        <article className="lateral-profile-stat">
-          <span>Visible TVD Delta</span>
-          <strong>{formatNumber(chartMetrics?.tvdDelta, 2)} ft</strong>
-        </article>
-        <article className="lateral-profile-stat">
-          <span>Selected MD</span>
-          <strong>{selectedProfilePoint ? `${formatNumber(selectedProfilePoint.md, 1)} ft` : "—"}</strong>
-        </article>
-      </div>
+      <div className="lateral-profile-body">
+        <aside className="lateral-profile-info-rail" aria-label="2D lateral profile summary">
+          <article className="lateral-profile-card">
+            <p className="lateral-profile-card-title">Visible MD Window</p>
+            <p className="lateral-profile-card-value">
+              {formatNumber(appliedStartMd, 0)} - {formatNumber(chartMetrics?.maxMd, 0)} ft
+            </p>
+          </article>
 
-      {chartMetrics && profilePoints.length >= 2 ? (
-        <div className="lateral-profile-chart-shell">
-          <svg
-            className="lateral-profile-chart"
-            viewBox={`0 0 ${PROFILE_WIDTH} ${PROFILE_HEIGHT}`}
-            preserveAspectRatio="xMidYMid meet"
-            role="img"
-            aria-label="Lateral profile plot of TVD versus MD"
-          >
-            <rect
-              x={PROFILE_PADDING.left}
-              y={PROFILE_PADDING.top}
-              width={PROFILE_WIDTH - PROFILE_PADDING.left - PROFILE_PADDING.right}
-              height={PROFILE_HEIGHT - PROFILE_PADDING.top - PROFILE_PADDING.bottom}
-              className="lateral-profile-plot-bg"
-            />
+          <article className="lateral-profile-card">
+            <p className="lateral-profile-card-title">Visible TVD Delta</p>
+            <p className="lateral-profile-card-value">{formatNumber(chartMetrics?.tvdDelta, 2)} ft</p>
+          </article>
 
-            {chartMetrics.tvdTicks.map((tick) => {
-              const y = chartMetrics.getY({ md: chartMetrics.minMd, tvd: tick });
-              return (
-                <g key={`tvd-tick-${tick}`}>
-                  <line
-                    x1={PROFILE_PADDING.left}
-                    x2={PROFILE_WIDTH - PROFILE_PADDING.right}
-                    y1={y}
-                    y2={y}
-                    className="lateral-profile-gridline lateral-profile-gridline-horizontal"
-                  />
-                  <text x={PROFILE_PADDING.left - 14} y={y + 5} textAnchor="end" className="lateral-profile-axis-text">
-                    {formatNumber(tick, 0)}
-                  </text>
-                </g>
-              );
-            })}
+          <article className="lateral-profile-card">
+            <p className="lateral-profile-card-title">Selected MD</p>
+            <p className="lateral-profile-card-value">
+              {selectedProfilePoint ? `${formatNumber(selectedProfilePoint.md, 1)} ft` : "—"}
+            </p>
+          </article>
 
-            {chartMetrics.mdTicks.map((tick) => {
-              const x = chartMetrics.getX({ md: tick, tvd: chartMetrics.snappedMinTvd });
-              return (
-                <g key={`md-tick-${tick}`}>
-                  <line
-                    x1={x}
-                    x2={x}
-                    y1={PROFILE_PADDING.top}
-                    y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
-                    className="lateral-profile-gridline lateral-profile-gridline-vertical"
-                  />
-                  <text
-                    x={x}
-                    y={PROFILE_HEIGHT - PROFILE_PADDING.bottom + 20}
-                    textAnchor="middle"
-                    className="lateral-profile-axis-text"
-                  >
-                    {formatNumber(tick, 0)}
-                  </text>
-                </g>
-              );
-            })}
+          <article className="lateral-profile-card">
+            <p className="lateral-profile-card-title">Shallowest Visible Point</p>
+            <p className="lateral-profile-card-detail">
+              MD {formatNumber(shallowestPoint?.md, 1)} ft | TVD {formatNumber(shallowestPoint?.tvd, 2)} ft
+            </p>
+          </article>
 
-            <line
-              x1={PROFILE_PADDING.left}
-              x2={PROFILE_WIDTH - PROFILE_PADDING.right}
-              y1={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
-              y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
-              className="lateral-profile-axis-line"
-            />
-            <line
-              x1={PROFILE_PADDING.left}
-              x2={PROFILE_PADDING.left}
-              y1={PROFILE_PADDING.top}
-              y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
-              className="lateral-profile-axis-line"
-            />
+          <article className="lateral-profile-card">
+            <p className="lateral-profile-card-title">Deepest Visible Point</p>
+            <p className="lateral-profile-card-detail">
+              MD {formatNumber(deepestPoint?.md, 1)} ft | TVD {formatNumber(deepestPoint?.tvd, 2)} ft
+            </p>
+          </article>
 
-            <text
-              x={(PROFILE_WIDTH - PROFILE_PADDING.right + PROFILE_PADDING.left) / 2}
-              y={PROFILE_HEIGHT - 10}
-              textAnchor="middle"
-              className="lateral-profile-axis-label"
-            >
-              Measured Depth (MD, ft)
-            </text>
-            <text
-              x={30}
-              y={PROFILE_PADDING.top - 4}
-              textAnchor="start"
-              className="lateral-profile-axis-label lateral-profile-axis-label-y"
-            >
-              TVD (ft)
-            </text>
+          <article className="lateral-profile-card">
+            <p className="lateral-profile-card-title">Selected Survey Point</p>
+            <p className="lateral-profile-card-detail">
+              {selectedProfilePoint
+                ? `MD ${formatNumber(selectedProfilePoint.md, 1)} ft | TVD ${formatNumber(selectedProfilePoint.tvd, 2)} ft`
+                : selectedOutsideRange
+                  ? "Selected point is outside the current lateral MD window."
+                  : "Click a point in 2D or 3D to inspect it here."}
+            </p>
+          </article>
+        </aside>
 
-            <path d={chartMetrics.path} className="lateral-profile-line" />
-
-            {profilePoints.map((point) => {
-              const isSelected = point.pointIndex === selectedPointIndex;
-              const isShallowest = shallowestPoint?.pointIndex === point.pointIndex;
-              const isDeepest = deepestPoint?.pointIndex === point.pointIndex;
-              const circleClassName = [
-                "lateral-profile-point",
-                isSelected ? "is-selected" : "",
-                isShallowest ? "is-shallowest" : "",
-                isDeepest ? "is-deepest" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-
-              return (
-                <circle
-                  key={`profile-point-${point.pointIndex}`}
-                  cx={chartMetrics.getX(point)}
-                  cy={chartMetrics.getY(point)}
-                  r={isSelected ? 5.4 : isShallowest || isDeepest ? 4.6 : 2.4}
-                  className={circleClassName}
-                  onClick={() => onSelectPoint?.(point.pointIndex)}
+        <div className="lateral-profile-plot-panel">
+          {chartMetrics && profilePoints.length >= 2 ? (
+            <div className="lateral-profile-chart-shell">
+              <svg
+                className="lateral-profile-chart"
+                viewBox={`0 0 ${PROFILE_WIDTH} ${PROFILE_HEIGHT}`}
+                preserveAspectRatio="xMidYMid meet"
+                role="img"
+                aria-label="Lateral profile plot of TVD versus MD"
+              >
+                <rect
+                  x={PROFILE_PADDING.left}
+                  y={PROFILE_PADDING.top}
+                  width={PROFILE_WIDTH - PROFILE_PADDING.left - PROFILE_PADDING.right}
+                  height={PROFILE_HEIGHT - PROFILE_PADDING.top - PROFILE_PADDING.bottom}
+                  className="lateral-profile-plot-bg"
                 />
-              );
-            })}
-          </svg>
-        </div>
-      ) : (
-        <div className="lateral-profile-empty">The selected MD window does not contain enough survey points to draw a lateral profile.</div>
-      )}
 
-      <div className="lateral-profile-readout">
-        <div>
-          <p className="lateral-profile-readout-title">Shallowest visible point</p>
-          <p className="lateral-profile-readout-value">
-            MD {formatNumber(shallowestPoint?.md, 1)} ft | TVD {formatNumber(shallowestPoint?.tvd, 2)} ft
-          </p>
-        </div>
-        <div>
-          <p className="lateral-profile-readout-title">Deepest visible point</p>
-          <p className="lateral-profile-readout-value">
-            MD {formatNumber(deepestPoint?.md, 1)} ft | TVD {formatNumber(deepestPoint?.tvd, 2)} ft
-          </p>
-        </div>
-        <div>
-          <p className="lateral-profile-readout-title">Selected survey point</p>
-          <p className="lateral-profile-readout-value">
-            {selectedProfilePoint
-              ? `MD ${formatNumber(selectedProfilePoint.md, 1)} ft | TVD ${formatNumber(selectedProfilePoint.tvd, 2)} ft`
-              : selectedOutsideRange
-                ? "Selected point is outside the current lateral MD window."
-                : "Click a point in 2D or 3D to inspect it here."}
-          </p>
+                {chartMetrics.tvdTicks.map((tick) => {
+                  const y = chartMetrics.getY({ md: chartMetrics.minMd, tvd: tick });
+                  return (
+                    <g key={`tvd-tick-${tick}`}>
+                      <line
+                        x1={PROFILE_PADDING.left}
+                        x2={PROFILE_WIDTH - PROFILE_PADDING.right}
+                        y1={y}
+                        y2={y}
+                        className="lateral-profile-gridline lateral-profile-gridline-horizontal"
+                      />
+                      <text x={PROFILE_PADDING.left - 14} y={y + 5} textAnchor="end" className="lateral-profile-axis-text">
+                        {formatNumber(tick, 0)}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                {chartMetrics.mdTicks.map((tick) => {
+                  const x = chartMetrics.getX({ md: tick, tvd: chartMetrics.snappedMinTvd });
+                  return (
+                    <g key={`md-tick-${tick}`}>
+                      <line
+                        x1={x}
+                        x2={x}
+                        y1={PROFILE_PADDING.top}
+                        y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                        className="lateral-profile-gridline lateral-profile-gridline-vertical"
+                      />
+                      <text
+                        x={x}
+                        y={PROFILE_HEIGHT - PROFILE_PADDING.bottom + 20}
+                        textAnchor="middle"
+                        className="lateral-profile-axis-text"
+                      >
+                        {formatNumber(tick, 0)}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                <line
+                  x1={PROFILE_PADDING.left}
+                  x2={PROFILE_WIDTH - PROFILE_PADDING.right}
+                  y1={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                  y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                  className="lateral-profile-axis-line"
+                />
+                <line
+                  x1={PROFILE_PADDING.left}
+                  x2={PROFILE_PADDING.left}
+                  y1={PROFILE_PADDING.top}
+                  y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                  className="lateral-profile-axis-line"
+                />
+
+                <text
+                  x={(PROFILE_WIDTH - PROFILE_PADDING.right + PROFILE_PADDING.left) / 2}
+                  y={PROFILE_HEIGHT - 10}
+                  textAnchor="middle"
+                  className="lateral-profile-axis-label"
+                >
+                  Measured Depth (MD, ft)
+                </text>
+                <text
+                  x={30}
+                  y={PROFILE_PADDING.top - 4}
+                  textAnchor="start"
+                  className="lateral-profile-axis-label lateral-profile-axis-label-y"
+                >
+                  TVD (ft)
+                </text>
+
+                <path d={chartMetrics.path} className="lateral-profile-line" />
+
+                {profilePoints.map((point) => {
+                  const isSelected = point.pointIndex === selectedPointIndex;
+                  const isShallowest = shallowestPoint?.pointIndex === point.pointIndex;
+                  const isDeepest = deepestPoint?.pointIndex === point.pointIndex;
+                  const circleClassName = [
+                    "lateral-profile-point",
+                    isSelected ? "is-selected" : "",
+                    isShallowest ? "is-shallowest" : "",
+                    isDeepest ? "is-deepest" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+
+                  return (
+                    <circle
+                      key={`profile-point-${point.pointIndex}`}
+                      cx={chartMetrics.getX(point)}
+                      cy={chartMetrics.getY(point)}
+                      r={isSelected ? 5.4 : isShallowest || isDeepest ? 4.6 : 2.4}
+                      className={circleClassName}
+                      onClick={() => onSelectPoint?.(point.pointIndex)}
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+          ) : (
+            <div className="lateral-profile-empty">The selected MD window does not contain enough survey points to draw a lateral profile.</div>
+          )}
         </div>
       </div>
     </section>
