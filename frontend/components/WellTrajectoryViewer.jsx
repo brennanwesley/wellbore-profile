@@ -18,6 +18,7 @@ const AXIS_VECTORS = {
 
 const COARSE_DEPTH_GUIDE_STEP = 1000;
 const FINE_DEPTH_GUIDE_STEP = 20;
+const ULTRA_FINE_DEPTH_GUIDE_STEP = 1;
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -113,6 +114,7 @@ function CameraSpinner({ controlsRef, enabled, axis = "z", speed = 0.45 }) {
 export default function WellTrajectoryViewer({ points, formations = [] }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
   const [pinnedPointIndex, setPinnedPointIndex] = useState(null);
+  const [showDepthGuides, setShowDepthGuides] = useState(true);
   const [showDepthLabels, setShowDepthLabels] = useState(true);
   const [viewMode, setViewMode] = useState("isometric");
   const [spinEnabled, setSpinEnabled] = useState(false);
@@ -399,30 +401,34 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         {depthGuides.map((guide) => {
           return (
             <group key={`depth-guide-${guide.tvd}`}>
-              <Line
-                points={[
-                  [depthGuideXStart, center[1], guide.z],
-                  [depthGuideXEnd, center[1], guide.z],
-                ]}
-                color="#c5d1d9"
-                lineWidth={1}
-              />
-              <Line
-                points={[
-                  [center[0], depthGuideYStart, guide.z],
-                  [center[0], depthGuideYEnd, guide.z],
-                ]}
-                color="#d1dce2"
-                lineWidth={1}
-              />
-              <Line
-                points={[
-                  [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
-                  [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
-                ]}
-                color="#4f6b7b"
-                lineWidth={1.6}
-              />
+              {showDepthGuides ? (
+                <>
+                  <Line
+                    points={[
+                      [depthGuideXStart, center[1], guide.z],
+                      [depthGuideXEnd, center[1], guide.z],
+                    ]}
+                    color="#c5d1d9"
+                    lineWidth={1}
+                  />
+                  <Line
+                    points={[
+                      [center[0], depthGuideYStart, guide.z],
+                      [center[0], depthGuideYEnd, guide.z],
+                    ]}
+                    color="#d1dce2"
+                    lineWidth={1}
+                  />
+                  <Line
+                    points={[
+                      [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
+                      [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
+                    ]}
+                    color="#4f6b7b"
+                    lineWidth={1.6}
+                  />
+                </>
+              ) : null}
               {showDepthLabels ? (
                 <Html
                   position={[depthGuideLabelX, depthGuideLabelY, guide.z]}
@@ -646,6 +652,20 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
             onClick={() => setDepthGuideStep(FINE_DEPTH_GUIDE_STEP)}
           >
             20 ft Scale
+          </button>
+          <button
+            type="button"
+            className={`viewer-tool-btn ${depthGuideStep === ULTRA_FINE_DEPTH_GUIDE_STEP ? "is-active" : ""}`}
+            onClick={() => setDepthGuideStep(ULTRA_FINE_DEPTH_GUIDE_STEP)}
+          >
+            1 ft Scale
+          </button>
+          <button
+            type="button"
+            className={`viewer-tool-btn ${showDepthGuides ? "is-active" : ""}`}
+            onClick={() => setShowDepthGuides((previous) => !previous)}
+          >
+            {showDepthGuides ? "Hide TVD Gridlines" : "Show TVD Gridlines"}
           </button>
           <button
             type="button"
