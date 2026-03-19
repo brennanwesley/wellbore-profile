@@ -8,7 +8,7 @@ const PROFILE_PADDING = {
   top: 24,
   right: 88,
   bottom: 48,
-  left: 78,
+  left: 108,
 };
 
 const GRID_STEPS = [1, 5, 10];
@@ -297,7 +297,13 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
 
       {chartMetrics && profilePoints.length >= 2 ? (
         <div className="lateral-profile-chart-shell">
-          <svg className="lateral-profile-chart" viewBox={`0 0 ${PROFILE_WIDTH} ${PROFILE_HEIGHT}`} preserveAspectRatio="none" role="img" aria-label="Lateral profile plot of TVD versus MD">
+          <svg
+            className="lateral-profile-chart"
+            viewBox={`0 0 ${PROFILE_WIDTH} ${PROFILE_HEIGHT}`}
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Lateral profile plot of TVD versus MD"
+          >
             <rect
               x={PROFILE_PADDING.left}
               y={PROFILE_PADDING.top}
@@ -317,7 +323,7 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
                     y2={y}
                     className="lateral-profile-gridline lateral-profile-gridline-horizontal"
                   />
-                  <text x={PROFILE_PADDING.left - 10} y={y + 4} textAnchor="end" className="lateral-profile-axis-text">
+                  <text x={PROFILE_PADDING.left - 14} y={y + 5} textAnchor="end" className="lateral-profile-axis-text">
                     {formatNumber(tick, 0)}
                   </text>
                 </g>
@@ -371,11 +377,10 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
               Measured Depth (MD, ft)
             </text>
             <text
-              x={22}
-              y={(PROFILE_HEIGHT - PROFILE_PADDING.bottom + PROFILE_PADDING.top) / 2}
-              textAnchor="middle"
-              transform={`rotate(-90 22 ${(PROFILE_HEIGHT - PROFILE_PADDING.bottom + PROFILE_PADDING.top) / 2})`}
-              className="lateral-profile-axis-label"
+              x={30}
+              y={PROFILE_PADDING.top - 4}
+              textAnchor="start"
+              className="lateral-profile-axis-label lateral-profile-axis-label-y"
             >
               TVD (ft)
             </text>
