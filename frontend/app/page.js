@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import LateralProfileViewer from "@/components/LateralProfileViewer";
 import WellTrajectoryViewer from "@/components/WellTrajectoryViewer";
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
 
@@ -56,6 +57,7 @@ function createFormationRow(index = 0) {
 
 export default function HomePage() {
   const [points, setPoints] = useState([]);
+  const [selectedPointIndex, setSelectedPointIndex] = useState(null);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
   const [formations, setFormations] = useState([]);
   const [importMapperKey, setImportMapperKey] = useState(0);
@@ -82,6 +84,7 @@ export default function HomePage() {
   const handleApplyTrajectory = useCallback(
     ({ points: mappedPoints, summary, sourceLabel, warnings, metadataSuggestions }) => {
       setPoints(mappedPoints);
+      setSelectedPointIndex(null);
       setImportWarnings(Array.isArray(warnings) ? warnings : []);
 
       const normalizedSuggestions = normalizeMetadataSuggestions(metadataSuggestions);
@@ -121,6 +124,7 @@ export default function HomePage() {
 
   const clearWorkspace = useCallback(() => {
     setPoints([]);
+    setSelectedPointIndex(null);
     setWellMetadata(INITIAL_METADATA);
     setFormations([]);
     setDetectedMetadata(null);
@@ -334,7 +338,24 @@ export default function HomePage() {
       </section>
 
       <section className="panel viewer-panel">
-        <WellTrajectoryViewer points={points} formations={formations} />
+        <div className="viewer-workspace">
+          <div className="viewer-pane viewer-pane-3d">
+            <WellTrajectoryViewer
+              points={points}
+              formations={formations}
+              selectedPointIndex={selectedPointIndex}
+              onSelectPoint={setSelectedPointIndex}
+            />
+          </div>
+
+          <div className="viewer-pane viewer-pane-2d">
+            <LateralProfileViewer
+              points={points}
+              selectedPointIndex={selectedPointIndex}
+              onSelectPoint={setSelectedPointIndex}
+            />
+          </div>
+        </div>
       </section>
     </main>
   );

@@ -18,7 +18,6 @@ const AXIS_VECTORS = {
 
 const COARSE_DEPTH_GUIDE_STEP = 1000;
 const FINE_DEPTH_GUIDE_STEP = 20;
-const ULTRA_FINE_DEPTH_GUIDE_STEP = 1;
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -111,9 +110,13 @@ function CameraSpinner({ controlsRef, enabled, axis = "z", speed = 0.45 }) {
   return null;
 }
 
-export default function WellTrajectoryViewer({ points, formations = [] }) {
+export default function WellTrajectoryViewer({
+  points,
+  formations = [],
+  selectedPointIndex = null,
+  onSelectPoint,
+}) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
-  const [pinnedPointIndex, setPinnedPointIndex] = useState(null);
   const [showDepthGuides, setShowDepthGuides] = useState(true);
   const [showDepthLabels, setShowDepthLabels] = useState(true);
   const [viewMode, setViewMode] = useState("isometric");
@@ -130,11 +133,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
     if (hoverPointIndex !== null && (hoverPointIndex < 0 || hoverPointIndex >= points.length)) {
       setHoverPointIndex(null);
     }
-
-    if (pinnedPointIndex !== null && (pinnedPointIndex < 0 || pinnedPointIndex >= points.length)) {
-      setPinnedPointIndex(null);
-    }
-  }, [hoverPointIndex, pinnedPointIndex, points.length]);
+  }, [hoverPointIndex, points.length]);
 
   const { center, span, bounds } = useMemo(() => {
     if (!hasEnoughPoints) {
@@ -330,7 +329,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
     }, []);
   }, [bounds.maxX, bounds.maxY, bounds.minX, bounds.minY, center, formations, hasEnoughPoints, linePoints, points, span]);
 
-  const activePointIndex = pinnedPointIndex ?? hoverPointIndex;
+  const activePointIndex = selectedPointIndex ?? hoverPointIndex;
   const activePoint =
     activePointIndex !== null && activePointIndex >= 0 && activePointIndex < points.length
       ? points[activePointIndex]
@@ -344,8 +343,8 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
     setViewerResetKey((previous) => previous + 1);
     setSpinEnabled(false);
     setHoverPointIndex(null);
-    setPinnedPointIndex(null);
-  }, []);
+    onSelectPoint?.(null);
+  }, [onSelectPoint]);
 
   const usingIsometricMode = viewMode === "isometric";
 
@@ -374,7 +373,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
       <Canvas
         key={`viewer-${viewerResetKey}`}
         onPointerMissed={() => {
-          setPinnedPointIndex(null);
+          onSelectPoint?.(null);
           setHoverPointIndex(null);
         }}
         camera={{
@@ -485,7 +484,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
             position={position}
             onPointerDown={(event) => {
               event.stopPropagation();
-              setPinnedPointIndex((currentIndex) => (currentIndex === index ? null : index));
+              onSelectPoint?.(selectedPointIndex === index ? null : index);
             }}
             onPointerOver={(event) => {
               event.stopPropagation();
@@ -499,10 +498,10 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
             <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
             <meshStandardMaterial
               color={
-                index === pinnedPointIndex ? "#f28f3b" : index === hoverPointIndex ? "#e9a963" : "#3f7d9e"
+                index === selectedPointIndex ? "#f28f3b" : index === hoverPointIndex ? "#e9a963" : "#3f7d9e"
               }
               transparent
-              opacity={index === pinnedPointIndex ? 0.95 : index === hoverPointIndex ? 0.78 : 0.45}
+              opacity={index === selectedPointIndex ? 0.95 : index === hoverPointIndex ? 0.78 : 0.45}
             />
           </mesh>
         ))}
@@ -520,7 +519,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
         {activePoint && activePosition ? (
           <Html position={activePosition} center distanceFactor={14}>
             <div className="depth-pill">
-              {pinnedPointIndex !== null ? "Pinned" : "Hover"} | MD: {formatNumber(activePoint.md, 1)} ft | TVD: {formatNumber(activePoint.tvd ?? activePoint.z, 1)} ft
+              {selectedPointIndex !== null ? "Selected" : "Hover"} | MD: {formatNumber(activePoint.md, 1)} ft | TVD: {formatNumber(activePoint.tvd ?? activePoint.z, 1)} ft
             </div>
           </Html>
         ) : null}
@@ -557,15 +556,15 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
       <section className="inspector-card" aria-live="polite">
         <div className="inspector-header">
           <p className="inspector-title">
-            {pinnedPointIndex !== null
-              ? `Pinned Point #${pinnedPointIndex + 1}`
+            {selectedPointIndex !== null
+              ? `Selected Point #${selectedPointIndex + 1}`
               : activePointIndex !== null
                 ? `Hover Point #${activePointIndex + 1}`
                 : "Point Inspector"}
           </p>
-          {pinnedPointIndex !== null ? (
-            <button type="button" className="secondary-btn inspector-clear-btn" onClick={() => setPinnedPointIndex(null)}>
-              Clear Pin
+          {selectedPointIndex !== null ? (
+            <button type="button" className="secondary-btn inspector-clear-btn" onClick={() => onSelectPoint?.(null)}>
+              Clear Selection
             </button>
           ) : null}
         </div>
@@ -599,7 +598,7 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
           </dl>
         ) : (
           <p className="inspector-empty">
-            Click a trajectory point to pin MD/TVD/N/E/DLS/Annotation. Hover previews are temporary.
+            Click a trajectory point to select MD/TVD/N/E/DLS/Annotation. Hover previews are temporary.
           </p>
         )}
       </section>
@@ -652,13 +651,6 @@ export default function WellTrajectoryViewer({ points, formations = [] }) {
             onClick={() => setDepthGuideStep(FINE_DEPTH_GUIDE_STEP)}
           >
             20 ft Scale
-          </button>
-          <button
-            type="button"
-            className={`viewer-tool-btn ${depthGuideStep === ULTRA_FINE_DEPTH_GUIDE_STEP ? "is-active" : ""}`}
-            onClick={() => setDepthGuideStep(ULTRA_FINE_DEPTH_GUIDE_STEP)}
-          >
-            1 ft Scale
           </button>
           <button
             type="button"
