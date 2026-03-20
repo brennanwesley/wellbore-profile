@@ -453,9 +453,13 @@ body {
 
 .viewer-workspace {
   display: grid;
-  grid-template-rows: minmax(0, 7fr) minmax(0, 3fr);
+  grid-template-rows: minmax(0, var(--viewer-top-split, 58%)) 14px minmax(0, calc(100% - var(--viewer-top-split, 58%) - 14px));
   height: 100%;
   min-height: 0;
+}
+
+.viewer-workspace.is-resizing {
+  cursor: row-resize;
 }
 
 .viewer-pane {
@@ -464,11 +468,37 @@ body {
 }
 
 .viewer-pane-3d {
-  border-bottom: 1px solid rgba(215, 205, 185, 0.9);
+  border-bottom: 0;
 }
 
 .viewer-pane-2d {
   background: linear-gradient(180deg, rgba(254, 250, 243, 0.96) 0%, rgba(247, 240, 226, 0.98) 100%);
+}
+
+.viewer-splitter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid rgba(215, 205, 185, 0.9);
+  border-bottom: 1px solid rgba(215, 205, 185, 0.9);
+  background: linear-gradient(180deg, rgba(247, 241, 229, 0.98) 0%, rgba(241, 234, 220, 0.98) 100%);
+  cursor: row-resize;
+}
+
+.viewer-splitter:focus-visible {
+  outline: 2px solid #4d788f;
+  outline-offset: -2px;
+}
+
+.viewer-splitter-handle {
+  width: 56px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(76, 104, 120, 0.62);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 
 .viewer-canvas {
@@ -874,7 +904,7 @@ body {
 
 .lateral-profile-body {
   display: grid;
-  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr);
+  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
   gap: 0.65rem;
   flex: 1 1 auto;
   min-height: 0;
@@ -929,6 +959,7 @@ body {
 
 .lateral-profile-chart-shell {
   flex: 1 1 auto;
+  width: 100%;
   min-height: 0;
   display: flex;
   align-items: stretch;
@@ -1123,8 +1154,12 @@ body {
   }
 
   .viewer-workspace {
-    grid-template-rows: minmax(62vh, 7fr) minmax(340px, 3fr);
+    grid-template-rows: minmax(62vh, auto) minmax(340px, auto);
     height: auto;
+  }
+
+  .viewer-splitter {
+    display: none;
   }
 
   .lateral-profile-panel {

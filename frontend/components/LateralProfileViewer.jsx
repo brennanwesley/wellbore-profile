@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-const PROFILE_WIDTH = 1200;
-const PROFILE_HEIGHT = 360;
-const PROFILE_PADDING = {
-  top: 24,
-  right: 88,
-  bottom: 48,
-  left: 108,
-};
+const DEFAULT_PROFILE_WIDTH = 980;
+const DEFAULT_PROFILE_HEIGHT = 340;
+const MIN_PROFILE_WIDTH = 420;
+const MIN_PROFILE_HEIGHT = 220;
 
 const GRID_STEPS = [1, 5, 10];
 
@@ -76,6 +72,11 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
   const [appliedStartMd, setAppliedStartMd] = useState(null);
   const [verticalGridStep, setVerticalGridStep] = useState(1);
   const [inputError, setInputError] = useState("");
+  const [chartSize, setChartSize] = useState({
+    width: DEFAULT_PROFILE_WIDTH,
+    height: DEFAULT_PROFILE_HEIGHT,
+  });
+  const chartShellRef = useRef(null);
 
   const validPoints = useMemo(() => {
     if (!Array.isArray(points)) {
@@ -118,6 +119,20 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
     setInputError("");
   }, [validPoints]);
 
+  const chartPadding = useMemo(() => {
+    const left = clamp(Math.round(chartSize.width * 0.1), 88, 118);
+    const right = clamp(Math.round(chartSize.width * 0.05), 62, 92);
+    const top = clamp(Math.round(chartSize.height * 0.09), 24, 34);
+    const bottom = clamp(Math.round(chartSize.height * 0.17), 48, 62);
+
+    return {
+      top,
+      right,
+      bottom,
+      left,
+    };
+  }, [chartSize.height, chartSize.width]);
+
   const profilePoints = useMemo(() => {
     if (appliedStartMd === null) {
       return validPoints;
@@ -159,11 +174,12 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
     const snappedMinTvd = Math.floor(minTvd / verticalGridStep) * verticalGridStep;
     const snappedMaxTvd = Math.ceil(maxTvd / verticalGridStep) * verticalGridStep;
     const safeMaxTvd = snappedMaxTvd === snappedMinTvd ? snappedMinTvd + verticalGridStep : snappedMaxTvd;
-    const plotWidth = PROFILE_WIDTH - PROFILE_PADDING.left - PROFILE_PADDING.right;
-    const plotHeight = PROFILE_HEIGHT - PROFILE_PADDING.top - PROFILE_PADDING.bottom;
+    const plotWidth = Math.max(chartSize.width - chartPadding.left - chartPadding.right, 160);
+    const plotHeight = Math.max(chartSize.height - chartPadding.top - chartPadding.bottom, 120);
     const mdRange = Math.max(maxMd - minMd, 1);
     const tvdRange = Math.max(safeMaxTvd - snappedMinTvd, verticalGridStep);
-    const mdTickStep = getNiceTickStep(minMd, maxMd, 6);
+    const targetMdTickCount = clamp(Math.round(plotWidth / 150), 4, 9);
+    const mdTickStep = getNiceTickStep(minMd, maxMd, targetMdTickCount);
     const mdTicks = [];
     const tvdTicks = [];
 
@@ -181,8 +197,8 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
       tvdTicks.push(Number(tick.toFixed(6)));
     }
 
-    const getX = (point) => PROFILE_PADDING.left + ((point.md - minMd) / mdRange) * plotWidth;
-    const getY = (point) => PROFILE_PADDING.top + ((point.tvd - snappedMinTvd) / tvdRange) * plotHeight;
+    const getX = (point) => chartPadding.left + ((point.md - minMd) / mdRange) * plotWidth;
+    const getY = (point) => chartPadding.top + ((point.tvd - snappedMinTvd) / tvdRange) * plotHeight;
 
     return {
       minMd,
@@ -198,7 +214,47 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
       path: buildPath(profilePoints, getX, getY),
       tvdDelta: maxTvd - minTvd,
     };
-  }, [profilePoints, verticalGridStep]);
+  }, [chartPadding.left, chartPadding.right, chartPadding.top, chartPadding.bottom, chartSize.height, chartSize.width, profilePoints, verticalGridStep]);
+
+  const canRenderChart = chartMetrics !== null && profilePoints.length >= 2;
+
+  useEffect(() => {
+    if (!canRenderChart || typeof ResizeObserver === "undefined") {
+      return undefined;
+    }
+
+    const chartShellElement = chartShellRef.current;
+
+    if (!chartShellElement) {
+      return undefined;
+    }
+
+    const updateChartSize = (width, height) => {
+      setChartSize({
+        width: Math.max(Math.round(width), MIN_PROFILE_WIDTH),
+        height: Math.max(Math.round(height), MIN_PROFILE_HEIGHT),
+      });
+    };
+
+    const initialBounds = chartShellElement.getBoundingClientRect();
+    updateChartSize(initialBounds.width, initialBounds.height);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const nextEntry = entries[0];
+
+      if (!nextEntry) {
+        return;
+      }
+
+      updateChartSize(nextEntry.contentRect.width, nextEntry.contentRect.height);
+    });
+
+    resizeObserver.observe(chartShellElement);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [canRenderChart]);
 
   const selectedOutsideRange = selectedPointIndex !== null && selectedProfilePoint === null;
 
@@ -322,20 +378,20 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
         </aside>
 
         <div className="lateral-profile-plot-panel">
-          {chartMetrics && profilePoints.length >= 2 ? (
-            <div className="lateral-profile-chart-shell">
+          {canRenderChart ? (
+            <div ref={chartShellRef} className="lateral-profile-chart-shell">
               <svg
                 className="lateral-profile-chart"
-                viewBox={`0 0 ${PROFILE_WIDTH} ${PROFILE_HEIGHT}`}
+                viewBox={`0 0 ${chartSize.width} ${chartSize.height}`}
                 preserveAspectRatio="xMidYMid meet"
                 role="img"
                 aria-label="Lateral profile plot of TVD versus MD"
               >
                 <rect
-                  x={PROFILE_PADDING.left}
-                  y={PROFILE_PADDING.top}
-                  width={PROFILE_WIDTH - PROFILE_PADDING.left - PROFILE_PADDING.right}
-                  height={PROFILE_HEIGHT - PROFILE_PADDING.top - PROFILE_PADDING.bottom}
+                  x={chartPadding.left}
+                  y={chartPadding.top}
+                  width={Math.max(chartSize.width - chartPadding.left - chartPadding.right, 160)}
+                  height={Math.max(chartSize.height - chartPadding.top - chartPadding.bottom, 120)}
                   className="lateral-profile-plot-bg"
                 />
 
@@ -344,13 +400,13 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
                   return (
                     <g key={`tvd-tick-${tick}`}>
                       <line
-                        x1={PROFILE_PADDING.left}
-                        x2={PROFILE_WIDTH - PROFILE_PADDING.right}
+                        x1={chartPadding.left}
+                        x2={chartSize.width - chartPadding.right}
                         y1={y}
                         y2={y}
                         className="lateral-profile-gridline lateral-profile-gridline-horizontal"
                       />
-                      <text x={PROFILE_PADDING.left - 14} y={y + 5} textAnchor="end" className="lateral-profile-axis-text">
+                      <text x={chartPadding.left - 12} y={y + 5} textAnchor="end" className="lateral-profile-axis-text">
                         {formatNumber(tick, 0)}
                       </text>
                     </g>
@@ -364,13 +420,13 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
                       <line
                         x1={x}
                         x2={x}
-                        y1={PROFILE_PADDING.top}
-                        y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                        y1={chartPadding.top}
+                        y2={chartSize.height - chartPadding.bottom}
                         className="lateral-profile-gridline lateral-profile-gridline-vertical"
                       />
                       <text
                         x={x}
-                        y={PROFILE_HEIGHT - PROFILE_PADDING.bottom + 20}
+                        y={chartSize.height - chartPadding.bottom + 20}
                         textAnchor="middle"
                         className="lateral-profile-axis-text"
                       >
@@ -381,31 +437,31 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
                 })}
 
                 <line
-                  x1={PROFILE_PADDING.left}
-                  x2={PROFILE_WIDTH - PROFILE_PADDING.right}
-                  y1={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
-                  y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                  x1={chartPadding.left}
+                  x2={chartSize.width - chartPadding.right}
+                  y1={chartSize.height - chartPadding.bottom}
+                  y2={chartSize.height - chartPadding.bottom}
                   className="lateral-profile-axis-line"
                 />
                 <line
-                  x1={PROFILE_PADDING.left}
-                  x2={PROFILE_PADDING.left}
-                  y1={PROFILE_PADDING.top}
-                  y2={PROFILE_HEIGHT - PROFILE_PADDING.bottom}
+                  x1={chartPadding.left}
+                  x2={chartPadding.left}
+                  y1={chartPadding.top}
+                  y2={chartSize.height - chartPadding.bottom}
                   className="lateral-profile-axis-line"
                 />
 
                 <text
-                  x={(PROFILE_WIDTH - PROFILE_PADDING.right + PROFILE_PADDING.left) / 2}
-                  y={PROFILE_HEIGHT - 10}
+                  x={(chartSize.width - chartPadding.right + chartPadding.left) / 2}
+                  y={chartSize.height - 12}
                   textAnchor="middle"
                   className="lateral-profile-axis-label"
                 >
                   Measured Depth (MD, ft)
                 </text>
                 <text
-                  x={30}
-                  y={PROFILE_PADDING.top - 4}
+                  x={22}
+                  y={chartPadding.top - 6}
                   textAnchor="start"
                   className="lateral-profile-axis-label lateral-profile-axis-label-y"
                 >

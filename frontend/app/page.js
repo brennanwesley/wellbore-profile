@@ -1,14 +1,21 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import LateralProfileViewer from "@/components/LateralProfileViewer";
 import WellTrajectoryViewer from "@/components/WellTrajectoryViewer";
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
 
 const DEFAULT_FORMATION_COLORS = ["#2f7d63", "#2c6e9f", "#a86d1e", "#8f3f3f", "#596f2a"];
+const DEFAULT_VIEWER_TOP_SPLIT = 58;
+const MIN_VIEWER_TOP_SPLIT = 40;
+const MAX_VIEWER_TOP_SPLIT = 82;
 
 function hasMetadataValue(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
+}
+
+function clamp(value, minValue, maxValue) {
+  return Math.min(Math.max(value, minValue), maxValue);
 }
 
 function normalizeMetadataSuggestions(metadataSuggestions) {
@@ -58,12 +65,16 @@ function createFormationRow(index = 0) {
 export default function HomePage() {
   const [points, setPoints] = useState([]);
   const [selectedPointIndex, setSelectedPointIndex] = useState(null);
+  const [viewerTopSplit, setViewerTopSplit] = useState(DEFAULT_VIEWER_TOP_SPLIT);
+  const [isViewerSplitDragging, setIsViewerSplitDragging] = useState(false);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
   const [formations, setFormations] = useState([]);
   const [importMapperKey, setImportMapperKey] = useState(0);
   const [detectedMetadata, setDetectedMetadata] = useState(null);
   const [fileStatus, setFileStatus] = useState(INITIAL_FILE_STATUS);
   const [importWarnings, setImportWarnings] = useState([]);
+  const viewerWorkspaceRef = useRef(null);
+  const viewerSplitDragStateRef = useRef(null);
 
   const addFormationRow = useCallback(() => {
     setFormations((previous) => [...previous, createFormationRow(previous.length)]);
@@ -125,6 +136,7 @@ export default function HomePage() {
   const clearWorkspace = useCallback(() => {
     setPoints([]);
     setSelectedPointIndex(null);
+    setViewerTopSplit(DEFAULT_VIEWER_TOP_SPLIT);
     setWellMetadata(INITIAL_METADATA);
     setFormations([]);
     setDetectedMetadata(null);
@@ -132,6 +144,64 @@ export default function HomePage() {
     setImportWarnings([]);
     setImportMapperKey((previous) => previous + 1);
   }, []);
+
+  const nudgeViewerSplit = useCallback((delta) => {
+    setViewerTopSplit((previous) => clamp(previous + delta, MIN_VIEWER_TOP_SPLIT, MAX_VIEWER_TOP_SPLIT));
+  }, []);
+
+  const handleViewerSplitPointerDown = useCallback((event) => {
+    if (typeof window !== "undefined" && window.innerWidth <= 980) {
+      return;
+    }
+
+    const workspace = viewerWorkspaceRef.current;
+    if (!workspace) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const bounds = workspace.getBoundingClientRect();
+    viewerSplitDragStateRef.current = {
+      top: bounds.top,
+      height: bounds.height,
+    };
+    setIsViewerSplitDragging(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isViewerSplitDragging) {
+      return undefined;
+    }
+
+    const handlePointerMove = (event) => {
+      const dragState = viewerSplitDragStateRef.current;
+
+      if (!dragState || dragState.height <= 0) {
+        return;
+      }
+
+      const nextTopShare = ((event.clientY - dragState.top) / dragState.height) * 100;
+      setViewerTopSplit(clamp(nextTopShare, MIN_VIEWER_TOP_SPLIT, MAX_VIEWER_TOP_SPLIT));
+    };
+
+    const handlePointerUp = () => {
+      viewerSplitDragStateRef.current = null;
+      setIsViewerSplitDragging(false);
+    };
+
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isViewerSplitDragging]);
 
   const hasEnoughPoints = points.length >= 2;
   const titleWellName = wellMetadata.wellName || "Upload Directional Survey";
@@ -338,7 +408,11 @@ export default function HomePage() {
       </section>
 
       <section className="panel viewer-panel">
-        <div className="viewer-workspace">
+        <div
+          ref={viewerWorkspaceRef}
+          className={`viewer-workspace ${isViewerSplitDragging ? "is-resizing" : ""}`}
+          style={{ "--viewer-top-split": `${viewerTopSplit}%` }}
+        >
           <div className="viewer-pane viewer-pane-3d">
             <WellTrajectoryViewer
               points={points}
@@ -347,6 +421,38 @@ export default function HomePage() {
               onSelectPoint={setSelectedPointIndex}
             />
           </div>
+
+          <button
+            type="button"
+            className="viewer-splitter"
+            onPointerDown={handleViewerSplitPointerDown}
+            onDoubleClick={() => setViewerTopSplit(DEFAULT_VIEWER_TOP_SPLIT)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                nudgeViewerSplit(-2);
+              }
+
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                nudgeViewerSplit(2);
+              }
+
+              if (event.key === "Home") {
+                event.preventDefault();
+                setViewerTopSplit(MIN_VIEWER_TOP_SPLIT);
+              }
+
+              if (event.key === "End") {
+                event.preventDefault();
+                setViewerTopSplit(MAX_VIEWER_TOP_SPLIT);
+              }
+            }}
+            aria-label="Resize the 3D viewer and lateral detail panes"
+            title="Drag to resize panes. Double-click to reset the default split."
+          >
+            <span className="viewer-splitter-handle" aria-hidden="true" />
+          </button>
 
           <div className="viewer-pane viewer-pane-2d">
             <LateralProfileViewer
