@@ -17,7 +17,6 @@ const AXIS_VECTORS = {
 };
 
 const COARSE_DEPTH_GUIDE_STEP = 1000;
-const FINE_DEPTH_GUIDE_STEP = 20;
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -124,7 +123,7 @@ export default function WellTrajectoryViewer({
   const [spinAxis, setSpinAxis] = useState("z");
   const [spinSpeed, setSpinSpeed] = useState(0.45);
   const [viewerResetKey, setViewerResetKey] = useState(0);
-  const [depthGuideStep, setDepthGuideStep] = useState(COARSE_DEPTH_GUIDE_STEP);
+  const depthGuideStep = COARSE_DEPTH_GUIDE_STEP;
 
   const orbitControlsRef = useRef(null);
   const hasEnoughPoints = Array.isArray(points) && points.length >= 2;
@@ -637,20 +636,6 @@ export default function WellTrajectoryViewer({
           </button>
           <button type="button" className="viewer-tool-btn" onClick={resetViewerCamera}>
             Reset View
-          </button>
-          <button
-            type="button"
-            className={`viewer-tool-btn ${depthGuideStep === COARSE_DEPTH_GUIDE_STEP ? "is-active" : ""}`}
-            onClick={() => setDepthGuideStep(COARSE_DEPTH_GUIDE_STEP)}
-          >
-            1000 ft Scale
-          </button>
-          <button
-            type="button"
-            className={`viewer-tool-btn ${depthGuideStep === FINE_DEPTH_GUIDE_STEP ? "is-active" : ""}`}
-            onClick={() => setDepthGuideStep(FINE_DEPTH_GUIDE_STEP)}
-          >
-            20 ft Scale
           </button>
           <button
             type="button"
