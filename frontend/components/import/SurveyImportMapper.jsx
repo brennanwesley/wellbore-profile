@@ -201,29 +201,48 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
     <section className="import-block" aria-label="Directional survey import">
       <section className="metadata-block import-upload-block" aria-label="Upload directional survey">
         <p className="metadata-title">Upload Directional Survey</p>
-        <div className="import-toolbar import-upload-toolbar">
-          <label className="secondary-btn file-input-btn" htmlFor="survey-file-input">
-            Upload Survey
-          </label>
-          <input
-            id="survey-file-input"
-            type="file"
-            accept=".csv,.txt,text/csv,text/plain"
-            onChange={handleFileUpload}
-            className="file-input"
-          />
-          <button
-            type="button"
-            onClick={handleApply}
-            className="secondary-btn"
-            disabled={!validationResult?.canApply}
-          >
-            View Wellbore Profile
-          </button>
+        <div className="import-step-list">
+          <div className="import-step-group">
+            <div className="import-step-row">
+              <span className="import-step-label">Step 1:</span>
+              <label className="secondary-btn file-input-btn import-step-btn" htmlFor="survey-file-input">
+                Upload Survey
+              </label>
+              <input
+                id="survey-file-input"
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+                onChange={handleFileUpload}
+                className="file-input"
+              />
+            </div>
+            <p className="import-source import-step-detail">{sourceLabel}</p>
+          </div>
+
+          <div className="import-step-row">
+            <span className="import-step-label">Step 2:</span>
+            <button type="button" onClick={handleValidate} className="secondary-btn import-step-btn" disabled={!rowCount}>
+              Validate Mapping
+            </button>
+          </div>
+
+          <div className="import-step-row">
+            <span className="import-step-label">Step 3:</span>
+            <button
+              type="button"
+              onClick={handleApply}
+              className="primary-btn import-step-btn"
+              disabled={!validationResult?.canApply}
+            >
+              View Wellbore Profile
+            </button>
+          </div>
         </div>
-        <p className="import-source">{sourceLabel}</p>
-        {rowCount > 0 && !validationResult?.canApply ? (
-          <p className="helper-note">Open Survey Validation to review the file and validate it before viewing.</p>
+        {rowCount > 0 && !validationResult ? (
+          <p className="helper-note">Run Step 2 after upload so Step 3 can load the profile.</p>
+        ) : null}
+        {validationResult && !validationResult.canApply ? (
+          <p className="helper-note">Validation found issues. Review Survey Validation, then run Steps 2 and 3 again.</p>
         ) : null}
       </section>
 
@@ -290,6 +309,8 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
 
             {rowCount > 0 ? (
               <>
+                <p className="helper-note">Adjust mappings here if needed, then return to Steps 2 and 3 above.</p>
+
                 <div className="mapper-controls">
                   <label className="mapper-field">
                     <span>Header mode</span>
@@ -365,12 +386,6 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
                       </select>
                     </label>
                   ))}
-                </div>
-
-                <div className="actions">
-                  <button type="button" onClick={handleValidate} className="primary-btn">
-                    Validate Mapping
-                  </button>
                 </div>
 
                 {validationResult ? (

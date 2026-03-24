@@ -125,16 +125,39 @@ body {
   font-size: 0.85rem;
 }
 
-.import-upload-toolbar {
+.import-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.import-step-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.import-step-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
   gap: 0.55rem;
 }
 
-.import-upload-toolbar .secondary-btn,
-.import-upload-toolbar .file-input-btn {
+.import-step-label {
+  min-width: 3.85rem;
+  color: #294355;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.import-step-btn {
   width: 100%;
   justify-content: center;
+}
+
+.import-step-detail {
+  margin-left: calc(3.85rem + 0.55rem);
 }
 
 .import-review-block {
@@ -1090,8 +1113,16 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .import-upload-toolbar {
+  .import-step-row {
     grid-template-columns: 1fr;
+  }
+
+  .import-step-label {
+    min-width: 0;
+  }
+
+  .import-step-detail {
+    margin-left: 0;
   }
 
   .clear-workspace-btn {

@@ -48,7 +48,7 @@ const INITIAL_METADATA = {
   groundElevation: "",
 };
 
-const INITIAL_FILE_STATUS = "Upload a survey file, validate it in Survey Validation, then view the wellbore profile.";
+const INITIAL_FILE_STATUS = "Use Step 1 to upload a survey, Step 2 to validate mapping, and Step 3 to view the wellbore profile.";
 
 function createFormationRow(index = 0) {
   return {
