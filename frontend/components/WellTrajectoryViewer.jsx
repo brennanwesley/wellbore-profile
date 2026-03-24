@@ -579,16 +579,12 @@ export default function WellTrajectoryViewer({
               <dd>{formatNumber(activePoint.tvd ?? activePoint.z, 1)}</dd>
             </div>
             <div>
-              <dt>Northing (ft)</dt>
-              <dd>{formatNumber(activePoint.northing ?? activePoint.y, 2)}</dd>
-            </div>
-            <div>
-              <dt>Easting (ft)</dt>
-              <dd>{formatNumber(activePoint.easting ?? activePoint.x, 2)}</dd>
-            </div>
-            <div>
               <dt>DLS (deg/100ft)</dt>
               <dd>{formatNumber(activePoint.dls, 2)}</dd>
+            </div>
+            <div>
+              <dt>Inclination (deg)</dt>
+              <dd>{formatNumber(activePoint.inclination, 2)}</dd>
             </div>
             <div className="inspector-annotation">
               <dt>Annotation</dt>
@@ -597,7 +593,7 @@ export default function WellTrajectoryViewer({
           </dl>
         ) : (
           <p className="inspector-empty">
-            Click a trajectory point to select MD/TVD/N/E/DLS/Annotation. Hover previews are temporary.
+            Click a trajectory point to select MD, TVD, DLS, inclination, and annotation. Hover previews are temporary.
           </p>
         )}
       </section>

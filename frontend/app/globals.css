@@ -888,7 +888,20 @@ body {
 }
 
 .lateral-profile-start-field {
-  max-width: 240px;
+  max-width: 320px;
+}
+
+.lateral-profile-start-label {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #284152;
+}
+
+.lateral-profile-start-input {
+  min-height: 46px;
+  padding: 0.6rem 0.72rem;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .lateral-profile-toolbar-actions {

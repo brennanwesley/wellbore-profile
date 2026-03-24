@@ -7,7 +7,7 @@ const DEFAULT_PROFILE_HEIGHT = 340;
 const MIN_PROFILE_WIDTH = 420;
 const MIN_PROFILE_HEIGHT = 220;
 
-const GRID_STEPS = [1, 5, 10];
+const GRID_STEPS = [5, 10, 20];
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -70,7 +70,7 @@ function buildPath(points, getX, getY) {
 export default function LateralProfileViewer({ points, selectedPointIndex = null, onSelectPoint }) {
   const [draftStartMd, setDraftStartMd] = useState("");
   const [appliedStartMd, setAppliedStartMd] = useState(null);
-  const [verticalGridStep, setVerticalGridStep] = useState(1);
+  const [verticalGridStep, setVerticalGridStep] = useState(5);
   const [inputError, setInputError] = useState("");
   const [chartSize, setChartSize] = useState({
     width: DEFAULT_PROFILE_WIDTH,
@@ -286,7 +286,6 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
         <div>
           <p className="lateral-profile-eyebrow">Lateral Detail View</p>
           <h2 className="lateral-profile-title">2D Lateral Profile</h2>
-          <p className="lateral-profile-subtitle">Use whole-well MD on the x-axis and a fine TVD grid to inspect lateral shape.</p>
         </div>
 
         <div className="lateral-profile-scale-group" aria-label="Vertical TVD grid scale">
@@ -305,11 +304,11 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
 
       <div className="lateral-profile-toolbar">
         <label className="mapper-field lateral-profile-start-field" htmlFor="lateral-start-md-input">
-          <span>Beginning of lateral MD (ft)</span>
+          <span className="lateral-profile-start-label">Beginning of lateral MD (ft)</span>
           <input
             id="lateral-start-md-input"
             type="number"
-            className="mapper-input"
+            className="mapper-input lateral-profile-start-input"
             value={draftStartMd}
             onChange={(event) => setDraftStartMd(event.target.value)}
             placeholder="Enter MD to begin 2D view"

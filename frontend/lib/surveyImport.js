@@ -526,6 +526,7 @@ export function extractMappedSurvey({ rows, mappings, dataStartRowIndex }) {
     tvd: record.tvd,
     northing: record.northing,
     easting: record.easting,
+    inclination: record.inclination,
     dls: record.dls,
     annotations: record.annotations,
     rowNumber: record.rowNumber,
