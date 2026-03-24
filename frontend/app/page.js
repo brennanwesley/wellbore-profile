@@ -48,7 +48,7 @@ const INITIAL_METADATA = {
   groundElevation: "",
 };
 
-const INITIAL_FILE_STATUS = "Upload a survey file, map the required fields, then apply trajectory.";
+const INITIAL_FILE_STATUS = "Upload a survey file, validate it in Survey Validation, then view the wellbore profile.";
 
 function createFormationRow(index = 0) {
   return {
@@ -70,7 +70,6 @@ export default function HomePage() {
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
   const [formations, setFormations] = useState([]);
   const [importMapperKey, setImportMapperKey] = useState(0);
-  const [detectedMetadata, setDetectedMetadata] = useState(null);
   const [fileStatus, setFileStatus] = useState(INITIAL_FILE_STATUS);
   const [importWarnings, setImportWarnings] = useState([]);
   const viewerWorkspaceRef = useRef(null);
@@ -99,7 +98,6 @@ export default function HomePage() {
       setImportWarnings(Array.isArray(warnings) ? warnings : []);
 
       const normalizedSuggestions = normalizeMetadataSuggestions(metadataSuggestions);
-      setDetectedMetadata(normalizedSuggestions);
 
       if (normalizedSuggestions) {
         setWellMetadata((previous) => ({
@@ -121,25 +119,12 @@ export default function HomePage() {
     [],
   );
 
-  const applyDetectedMetadata = useCallback(() => {
-    if (!detectedMetadata) {
-      return;
-    }
-
-    setWellMetadata({
-      wellName: detectedMetadata.wellName,
-      kellyBushing: detectedMetadata.kellyBushing,
-      groundElevation: detectedMetadata.groundElevation,
-    });
-  }, [detectedMetadata]);
-
   const clearWorkspace = useCallback(() => {
     setPoints([]);
     setSelectedPointIndex(null);
     setViewerTopSplit(DEFAULT_VIEWER_TOP_SPLIT);
     setWellMetadata(INITIAL_METADATA);
     setFormations([]);
-    setDetectedMetadata(null);
     setFileStatus(INITIAL_FILE_STATUS);
     setImportWarnings([]);
     setImportMapperKey((previous) => previous + 1);
@@ -264,15 +249,7 @@ export default function HomePage() {
             </label>
           </div>
 
-          {detectedMetadata ? (
-            <div className="actions">
-              <button type="button" onClick={applyDetectedMetadata} className="secondary-btn">
-                Use imported metadata values
-              </button>
-            </div>
-          ) : null}
-
-          <p className="helper-note">Manual edits always override imported metadata suggestions.</p>
+          <p className="helper-note">Imported metadata fills empty fields automatically. You can still edit any value manually.</p>
         </section>
 
         <SurveyImportMapper key={importMapperKey} onApplyTrajectory={handleApplyTrajectory} />

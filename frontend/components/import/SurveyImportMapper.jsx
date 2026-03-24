@@ -12,7 +12,6 @@ import {
   suggestMappings,
 } from "@/lib/surveyImport";
 
-const SAMPLE_FILE_PATH = "/data/DirectionalSurveyExample.csv";
 const PREVIEW_ROW_COUNT = 6;
 
 function clamp(value, min, max) {
@@ -65,8 +64,7 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
     sourceRows: {},
   });
   const [validationResult, setValidationResult] = useState(null);
-  const [isLoadingSample, setIsLoadingSample] = useState(false);
-  const [isReviewExpanded, setIsReviewExpanded] = useState(true);
+  const [isReviewExpanded, setIsReviewExpanded] = useState(false);
 
   const rowCount = rows.length;
   const detectedHeaderRowIndex = useMemo(() => detectHeaderRowIndex(rows), [rows]);
@@ -162,25 +160,6 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
     [parseAndInitialize],
   );
 
-  const handleLoadSample = useCallback(async () => {
-    setIsLoadingSample(true);
-
-    try {
-      const response = await fetch(SAMPLE_FILE_PATH, { cache: "no-store" });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load sample (${response.status}).`);
-      }
-
-      const sampleText = await response.text();
-      parseAndInitialize(sampleText, "Sample: DirectionalSurveyExample.csv");
-    } catch {
-      setParseErrors(["Could not load DirectionalSurveyExample.csv sample file."]);
-    } finally {
-      setIsLoadingSample(false);
-    }
-  }, [parseAndInitialize]);
-
   const handleAutoMap = useCallback(() => {
     setMappings(suggestMappings(columnOptions));
     setValidationResult(null);
@@ -235,24 +214,27 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
           />
           <button
             type="button"
-            onClick={handleLoadSample}
+            onClick={handleApply}
             className="secondary-btn"
-            disabled={isLoadingSample}
+            disabled={!validationResult?.canApply}
           >
-            {isLoadingSample ? "Loading Sample..." : "Load Sample File"}
+            View Wellbore Profile
           </button>
         </div>
         <p className="import-source">{sourceLabel}</p>
+        {rowCount > 0 && !validationResult?.canApply ? (
+          <p className="helper-note">Open Survey Validation to review the file and validate it before viewing.</p>
+        ) : null}
       </section>
 
-      <section className="metadata-block import-review-block" aria-label="Survey review">
+      <section className="metadata-block import-review-block" aria-label="Survey validation">
         <button
           type="button"
           className="section-toggle"
           aria-expanded={isReviewExpanded}
           onClick={() => setIsReviewExpanded((previous) => !previous)}
         >
-          <span className="section-toggle-title">Survey Review</span>
+          <span className="section-toggle-title">Survey Validation</span>
           <span className={`section-toggle-icon ${isReviewExpanded ? "is-open" : ""}`} aria-hidden="true">
             ▾
           </span>
@@ -388,14 +370,6 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
                 <div className="actions">
                   <button type="button" onClick={handleValidate} className="primary-btn">
                     Validate Mapping
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleApply}
-                    className="secondary-btn"
-                    disabled={!validationResult?.canApply}
-                  >
-                    Apply Trajectory
                   </button>
                 </div>
 
