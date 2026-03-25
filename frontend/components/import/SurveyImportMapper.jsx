@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import {
   MAPPING_FIELDS,
   buildColumnOptions,
@@ -48,7 +48,8 @@ function isLikelyUnitsRow(row = []) {
   return unitsLikeCount / nonEmpty.length >= 0.6;
 }
 
-export default function SurveyImportMapper({ onApplyTrajectory }) {
+export default function SurveyImportMapper({ onApplyTrajectory, applyButtonLabel = "View Wellbore Profile" }) {
+  const generatedId = useId();
   const [rawTableText, setRawTableText] = useState("");
   const [sourceLabel, setSourceLabel] = useState("No file loaded yet.");
   const [rows, setRows] = useState([]);
@@ -65,6 +66,9 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
   });
   const [validationResult, setValidationResult] = useState(null);
   const [isReviewExpanded, setIsReviewExpanded] = useState(false);
+  const inputIdPrefix = String(generatedId).replace(/[^a-zA-Z0-9_-]/g, "-");
+  const surveyFileInputId = `${inputIdPrefix}-survey-file-input`;
+  const tablePasteInputId = `${inputIdPrefix}-table-paste-input`;
 
   const rowCount = rows.length;
   const detectedHeaderRowIndex = useMemo(() => detectHeaderRowIndex(rows), [rows]);
@@ -205,11 +209,11 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
           <div className="import-step-group">
             <div className="import-step-row">
               <span className="import-step-label">Step 1:</span>
-              <label className="secondary-btn file-input-btn import-step-btn" htmlFor="survey-file-input">
+              <label className="secondary-btn file-input-btn import-step-btn" htmlFor={surveyFileInputId}>
                 Upload Survey
               </label>
               <input
-                id="survey-file-input"
+                id={surveyFileInputId}
                 type="file"
                 accept=".csv,.txt,text/csv,text/plain"
                 onChange={handleFileUpload}
@@ -234,7 +238,7 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
               className="primary-btn import-step-btn"
               disabled={!validationResult?.canApply}
             >
-              View Wellbore Profile
+              {applyButtonLabel}
             </button>
           </div>
         </div>
@@ -261,11 +265,11 @@ export default function SurveyImportMapper({ onApplyTrajectory }) {
 
         {isReviewExpanded ? (
           <div className="survey-review-shell">
-            <label className="label" htmlFor="table-paste-input">
+            <label className="label" htmlFor={tablePasteInputId}>
               Paste full survey table text (optional)
             </label>
             <textarea
-              id="table-paste-input"
+              id={tablePasteInputId}
               className="coordinate-input"
               value={rawTableText}
               onChange={(event) => setRawTableText(event.target.value)}

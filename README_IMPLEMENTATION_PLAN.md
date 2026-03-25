@@ -14,7 +14,7 @@ Date: 2026-03-25
 - `[x]` Step 2 - Build a public landing page at the root route with a professional blue-toned visual identity and a clear `Enter Site` action.
 - `[x]` Step 3 - Build a workspace selection page that clearly routes users to either the single-well viewer or the future multi-well DSU viewer.
 - `[x]` Step 4 - Add shared navigation and fallback behavior across routes so users can move through the app without getting lost or hitting blank states.
-- `[ ]` Step 5 - Build the initial multi-well DSU viewer workflow with a clean empty state, well-by-well setup flow, and a 3D-only first experience.
+- `[x]` Step 5 - Build the initial multi-well DSU viewer workflow with a clean empty state, well-by-well setup flow, and a 3D-only first experience.
 - `[ ]` Step 6 - Add high-impact polish items that improve clarity and reliability as the app grows, including route-level error handling, loading states, and lightweight operational guardrails.
 
 ## Notes
