@@ -1,13 +1,11 @@
 import Link from "next/link";
+import AppRouteNav from "@/components/AppRouteNav";
 
 export default function DsuViewPage() {
   return (
     <main className="tool-empty-page">
       <section className="tool-empty-shell">
-        <Link href="/workspace" className="workspace-back-link">
-          <span aria-hidden="true">←</span>
-          <span>Back to Workspace</span>
-        </Link>
+        <AppRouteNav currentPath="/dsu-view" />
         <p className="tool-empty-eyebrow">Multi-Well DSU Viewer</p>
         <h1 className="tool-empty-title">This workspace is ready for the next build step.</h1>
         <p className="tool-empty-description">

@@ -1,14 +1,13 @@
 import Link from "next/link";
+import AppRouteNav from "@/components/AppRouteNav";
 
 export default function WorkspaceSelectionPage() {
   return (
     <main className="workspace-page">
       <section className="workspace-shell">
+        <AppRouteNav currentPath="/workspace" />
+
         <header className="workspace-header">
-          <Link href="/" className="workspace-back-link">
-            <span aria-hidden="true">←</span>
-            <span>Public Home</span>
-          </Link>
           <p className="workspace-eyebrow">Viewer Selection</p>
           <h1 className="workspace-title">Choose Your Workspace</h1>
           <p className="workspace-description">
