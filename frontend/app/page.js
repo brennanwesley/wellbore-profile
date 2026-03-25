@@ -1,5 +1,5 @@
-import SingleWellWorkspace from "@/components/SingleWellWorkspace";
+import PublicLandingPage from "@/components/PublicLandingPage";
 
 export default function HomePage() {
-  return <SingleWellWorkspace />;
+  return <PublicLandingPage />;
 }
