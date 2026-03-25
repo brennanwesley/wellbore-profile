@@ -153,6 +153,190 @@ body {
   line-height: 1.55;
 }
 
+.workspace-page,
+.tool-empty-page {
+  min-height: 100vh;
+  padding: 1.2rem;
+}
+
+.workspace-shell,
+.tool-empty-shell {
+  min-height: calc(100vh - 2.4rem);
+  border: 1px solid rgba(107, 136, 150, 0.22);
+  border-radius: 26px;
+  background:
+    linear-gradient(145deg, rgba(244, 249, 251, 0.95), rgba(231, 239, 242, 0.9)),
+    rgba(255, 255, 255, 0.6);
+  box-shadow: 0 24px 60px rgba(29, 49, 63, 0.12);
+}
+
+.workspace-shell {
+  padding: clamp(1.25rem, 2.8vw, 2.3rem);
+}
+
+.tool-empty-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(1.3rem, 3vw, 2.4rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.workspace-header {
+  max-width: 760px;
+}
+
+.workspace-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  color: #36586b;
+  text-decoration: none;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.workspace-back-link:hover,
+.workspace-card-link:hover,
+.tool-floating-nav-link:hover {
+  text-decoration: underline;
+}
+
+.workspace-eyebrow,
+.tool-empty-eyebrow,
+.workspace-card-kicker {
+  margin: 0;
+  color: #0a5c70;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.workspace-title,
+.tool-empty-title {
+  margin: 0.6rem 0 0;
+  color: #173243;
+  line-height: 1.04;
+}
+
+.workspace-title {
+  font-size: clamp(2.15rem, 4vw, 3.35rem);
+}
+
+.tool-empty-title {
+  font-size: clamp(2rem, 3.8vw, 3rem);
+  max-width: 16ch;
+}
+
+.workspace-description,
+.tool-empty-description {
+  margin: 0.9rem 0 0;
+  color: #4b6371;
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 46rem;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+.workspace-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(90, 121, 136, 0.18);
+  background: rgba(255, 252, 247, 0.84);
+  box-shadow: 0 16px 40px rgba(31, 48, 59, 0.08);
+}
+
+.workspace-card-visual {
+  padding: 0.9rem;
+  background: linear-gradient(180deg, rgba(15, 57, 74, 0.08), rgba(15, 89, 112, 0.03));
+}
+
+.workspace-card-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 18px;
+  box-shadow: 0 10px 28px rgba(27, 49, 63, 0.12);
+}
+
+.workspace-card-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1.15rem 1.15rem 1.25rem;
+}
+
+.workspace-card-body h2 {
+  margin: 0;
+  color: #173243;
+  font-size: 1.45rem;
+}
+
+.workspace-card-body p {
+  margin: 0;
+  color: #526875;
+  line-height: 1.65;
+}
+
+.workspace-card-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+  color: #114d67;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.workspace-card-link-secondary {
+  color: #0a6078;
+}
+
+.tool-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 1.6rem;
+}
+
+.tool-floating-nav {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 20;
+}
+
+.tool-floating-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.62rem 0.84rem;
+  border-radius: 999px;
+  background: rgba(247, 252, 255, 0.92);
+  border: 1px solid rgba(103, 134, 149, 0.24);
+  box-shadow: 0 10px 28px rgba(25, 47, 61, 0.12);
+  color: #244255;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.tool-floating-nav + .page-shell {
+  padding-top: 4.4rem;
+}
+
 .page-shell {
   height: 100vh;
   display: grid;
@@ -1250,6 +1434,40 @@ body {
   .landing-primary-link {
     width: 100%;
     justify-content: center;
+  }
+
+  .workspace-page,
+  .tool-empty-page {
+    padding: 0.9rem;
+  }
+
+  .workspace-shell,
+  .tool-empty-shell {
+    min-height: calc(100vh - 1.8rem);
+    padding: 1.2rem;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-empty-title {
+    max-width: none;
+  }
+
+  .tool-empty-actions {
+    flex-direction: column;
+  }
+
+  .tool-floating-nav {
+    top: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .tool-floating-nav-link {
+    justify-content: center;
+    width: 100%;
   }
 
   .page-shell {

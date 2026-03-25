@@ -12,14 +12,14 @@ export default function PublicLandingPage() {
             visualization and future DSU-scale multi-well analysis.
           </p>
           <div className="landing-actions">
-            <Link href="/single-well" className="landing-primary-link">
+            <Link href="/workspace" className="landing-primary-link">
               <span>Enter Site</span>
               <span className="landing-primary-link-arrow" aria-hidden="true">
                 →
               </span>
             </Link>
           </div>
-          <p className="landing-support">Enter the current viewer experience and begin working with a well survey.</p>
+          <p className="landing-support">Choose the single-well or DSU workflow from a clean workspace selector.</p>
         </div>
 
         <div className="landing-visual-card">
