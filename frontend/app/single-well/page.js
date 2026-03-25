@@ -1,5 +1,5 @@
 import SingleWellWorkspace from "@/components/SingleWellWorkspace";
 
-export default function HomePage() {
+export default function SingleWellPage() {
   return <SingleWellWorkspace />;
 }
