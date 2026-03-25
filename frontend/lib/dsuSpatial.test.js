@@ -1,7 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { buildDsuSurfaceLayout, DSU_PROXIMITY_WARNING_FT } from "./dsuSpatial";
+import { buildDsuSurfaceLayout, DSU_PROXIMITY_WARNING_FT, validateSurfaceCoordinates } from "./dsuSpatial";
 
 describe("buildDsuSurfaceLayout", () => {
+  it("validates decimal latitude and longitude ranges", () => {
+    expect(validateSurfaceCoordinates({ latitude: 31.1, longitude: -102.3 })).toMatchObject({
+      isComplete: true,
+      isValid: true,
+      message: null,
+    });
+
+    expect(validateSurfaceCoordinates({ latitude: 95, longitude: -102.3 })).toMatchObject({
+      isComplete: true,
+      isValid: false,
+      message: "Latitude must be a decimal value between -90 and 90.",
+    });
+
+    expect(validateSurfaceCoordinates({ latitude: 31.1, longitude: -190 })).toMatchObject({
+      isComplete: true,
+      isValid: false,
+      message: "Longitude must be a decimal value between -180 and 180.",
+    });
+  });
+
   it("positions ready wells relative to the first valid surface location", () => {
     const layout = buildDsuSurfaceLayout([
       {
@@ -59,5 +79,27 @@ describe("buildDsuSurfaceLayout", () => {
       firstWellName: "Well A",
       secondWellName: "Well B",
     });
+  });
+
+  it("excludes wells with out-of-range coordinates from the ready layout", () => {
+    const layout = buildDsuSurfaceLayout([
+      {
+        id: "well-a",
+        name: "Well A",
+        latitude: 31,
+        longitude: -102,
+        points: [{ x: 0, y: 0, z: 0 }, { x: 10, y: 20, z: 30 }],
+      },
+      {
+        id: "well-b",
+        name: "Well B",
+        latitude: 131,
+        longitude: -102.01,
+        points: [{ x: 0, y: 0, z: 0 }, { x: 10, y: 20, z: 30 }],
+      },
+    ]);
+
+    expect(layout.readyWells).toHaveLength(1);
+    expect(layout.readyWells[0]).toMatchObject({ id: "well-a" });
   });
 });

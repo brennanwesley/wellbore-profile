@@ -1,6 +1,7 @@
 "use client";
 
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
+import { validateSurfaceCoordinates } from "@/lib/dsuSpatial";
 
 export default function DsuWellSetupCard({
   well,
@@ -11,12 +12,15 @@ export default function DsuWellSetupCard({
   onRemove,
   onApplyTrajectory,
 }) {
-  const hasSurfaceLocation = String(well.latitude ?? "").trim() !== "" && String(well.longitude ?? "").trim() !== "";
+  const coordinateValidation = validateSurfaceCoordinates(well);
+  const hasSurfaceLocation = coordinateValidation.isComplete;
   const hasTrajectory = Array.isArray(well.points) && well.points.length >= 2;
   const statusText = hasTrajectory
-    ? hasSurfaceLocation
+    ? coordinateValidation.isValid
       ? "Ready in 3D view"
-      : "Add surface coordinates to place this well in the DSU view"
+      : hasSurfaceLocation
+        ? "Surface coordinates need correction before this well can enter the DSU view"
+        : "Add surface coordinates to place this well in the DSU view"
     : "Upload, validate, and apply a survey for this well";
 
   return (
@@ -60,7 +64,7 @@ export default function DsuWellSetupCard({
           <input
             id={`dsu-well-latitude-${well.id}`}
             type="number"
-            className="mapper-input"
+            className={`mapper-input ${coordinateValidation.isComplete && !coordinateValidation.isValid ? "is-invalid" : ""}`}
             value={well.latitude}
             onChange={(event) => onFieldChange(well.id, "latitude", event.target.value)}
             placeholder="e.g. 31.75542"
@@ -73,7 +77,7 @@ export default function DsuWellSetupCard({
           <input
             id={`dsu-well-longitude-${well.id}`}
             type="number"
-            className="mapper-input"
+            className={`mapper-input ${coordinateValidation.isComplete && !coordinateValidation.isValid ? "is-invalid" : ""}`}
             value={well.longitude}
             onChange={(event) => onFieldChange(well.id, "longitude", event.target.value)}
             placeholder="e.g. -102.35411"
@@ -81,6 +85,8 @@ export default function DsuWellSetupCard({
           />
         </label>
       </div>
+
+      {coordinateValidation.message ? <p className="warning mapper-field-note">{coordinateValidation.message}</p> : null}
 
       <SurveyImportMapper
         key={`${well.id}-${well.importMapperKey}`}

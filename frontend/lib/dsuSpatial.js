@@ -16,20 +16,64 @@ function normalizeWellName(well, index) {
   return preferredName || `Well ${index + 1}`;
 }
 
+export function validateSurfaceCoordinates(well) {
+  const latitudeText = String(well?.latitude ?? "").trim();
+  const longitudeText = String(well?.longitude ?? "").trim();
+
+  if (!latitudeText || !longitudeText) {
+    return {
+      isComplete: false,
+      isValid: false,
+      latitude: null,
+      longitude: null,
+      message: null,
+    };
+  }
+
+  const latitude = toFiniteNumber(latitudeText);
+  if (latitude === null || latitude < -90 || latitude > 90) {
+    return {
+      isComplete: true,
+      isValid: false,
+      latitude,
+      longitude: null,
+      message: "Latitude must be a decimal value between -90 and 90.",
+    };
+  }
+
+  const longitude = toFiniteNumber(longitudeText);
+  if (longitude === null || longitude < -180 || longitude > 180) {
+    return {
+      isComplete: true,
+      isValid: false,
+      latitude,
+      longitude,
+      message: "Longitude must be a decimal value between -180 and 180.",
+    };
+  }
+
+  return {
+    isComplete: true,
+    isValid: true,
+    latitude,
+    longitude,
+    message: null,
+  };
+}
+
 export function buildDsuSurfaceLayout(wells) {
   const renderableWells = (Array.isArray(wells) ? wells : []).reduce((accumulator, well, index) => {
-    const latitude = toFiniteNumber(well?.latitude);
-    const longitude = toFiniteNumber(well?.longitude);
+    const coordinateValidation = validateSurfaceCoordinates(well);
     const points = Array.isArray(well?.points) ? well.points : [];
 
-    if (latitude === null || longitude === null || points.length < 2) {
+    if (!coordinateValidation.isValid || points.length < 2) {
       return accumulator;
     }
 
     accumulator.push({
       ...well,
-      latitude,
-      longitude,
+      latitude: coordinateValidation.latitude,
+      longitude: coordinateValidation.longitude,
       points,
       wellName: normalizeWellName(well, index),
     });

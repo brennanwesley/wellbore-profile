@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import AppRouteNav from "@/components/AppRouteNav";
 import DsuWellSetupCard from "@/components/DsuWellSetupCard";
 import MultiWellTrajectoryViewer from "@/components/MultiWellTrajectoryViewer";
-import { buildDsuSurfaceLayout, DSU_PROXIMITY_WARNING_FT } from "@/lib/dsuSpatial";
+import { buildDsuSurfaceLayout, DSU_PROXIMITY_WARNING_FT, validateSurfaceCoordinates } from "@/lib/dsuSpatial";
 
 const WELL_COLORS = ["#0f7b8a", "#2f85b0", "#f29b3f", "#8f3f3f", "#2f7d63", "#6d5fd4"];
 const INITIAL_WELL_STATUS = "Upload a survey, validate the field mapping, and add this well to the DSU view.";
@@ -45,6 +45,10 @@ export default function MultiWellDsuWorkspace() {
   const surfaceLayout = useMemo(() => buildDsuSurfaceLayout(wells), [wells]);
   const surveysLoadedCount = wells.filter((well) => well.points.length >= 2).length;
   const readyWellCount = surfaceLayout.readyWells.length;
+  const invalidSurfaceCount = wells.filter((well) => {
+    const coordinateValidation = validateSurfaceCoordinates(well);
+    return coordinateValidation.isComplete && !coordinateValidation.isValid;
+  }).length;
   const missingSurfaceCount = wells.filter(
     (well) => well.points.length >= 2 && (!String(well.latitude).trim() || !String(well.longitude).trim()),
   ).length;
@@ -156,11 +160,19 @@ export default function MultiWellDsuWorkspace() {
               </p>
             ) : null}
 
+            {invalidSurfaceCount > 0 ? (
+              <p className="warning">
+                {invalidSurfaceCount} well(s) have surface coordinates outside the accepted decimal range and will stay out of the 3D view until corrected.
+              </p>
+            ) : null}
+
             {readyWellCount < 2 ? (
               <p className="helper-note">
                 Upload at least two ready wells for a true DSU comparison. A single ready well will still render so you can verify import and placement.
               </p>
             ) : null}
+
+            <p className="helper-note">For smoother 3D review, use a current desktop browser and keep the DSU scene focused on the wells you are actively comparing.</p>
           </section>
 
           <div className="dsu-toolbar-row">

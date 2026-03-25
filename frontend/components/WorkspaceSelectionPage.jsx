@@ -11,9 +11,10 @@ export default function WorkspaceSelectionPage() {
           <p className="workspace-eyebrow">Viewer Selection</p>
           <h1 className="workspace-title">Choose Your Workspace</h1>
           <p className="workspace-description">
-            Select the workflow that matches the task in front of you. The single-well viewer is fully active now,
-            and the DSU route is prepared for the multi-well feature that comes next.
+            Select the workflow that matches the task in front of you. The single-well viewer is fully active, and the
+            DSU route now supports a simple multi-well setup flow with surface coordinates and a shared 3D view.
           </p>
+          <p className="helper-note">Use the DSU route when you need multiple surveys in one 3D scene. Use the single-well route when you want the 2D lateral view as well.</p>
         </header>
 
         <div className="workspace-grid">
@@ -69,11 +70,11 @@ export default function WorkspaceSelectionPage() {
               </svg>
             </div>
             <div className="workspace-card-body">
-              <p className="workspace-card-kicker">Next Workflow</p>
+              <p className="workspace-card-kicker">Multi-Well Workflow</p>
               <h2>Multiple Wells in DSU</h2>
               <p>
-                Prepare to place multiple wells in one 3D subsurface view using surface coordinates and separate survey
-                uploads for each well.
+                Place multiple wells in one 3D subsurface view using surface coordinates, separate survey uploads, and
+                lightweight spacing guidance.
               </p>
               <Link href="/dsu-view" className="workspace-card-link workspace-card-link-secondary">
                 <span>Open DSU View</span>
