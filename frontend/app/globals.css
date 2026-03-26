@@ -1641,15 +1641,15 @@ body {
 .lateral-profile-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.45rem;
   height: 100%;
   min-height: 0;
-  padding: 0.75rem 0.85rem 0.8rem;
+  padding: 0.56rem 0.72rem 0.62rem;
 }
 
 .lateral-profile-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.7rem;
   flex-wrap: wrap;
@@ -1665,7 +1665,7 @@ body {
 }
 
 .lateral-profile-title {
-  margin: 0.12rem 0 0;
+  margin: 0;
   font-size: 1.02rem;
   line-height: 1.1;
   color: #213847;
@@ -1694,7 +1694,7 @@ body {
 
 .lateral-profile-start-field {
   width: 100%;
-  max-width: 250px;
+  max-width: 100%;
 }
 
 .lateral-profile-start-label {
@@ -1736,27 +1736,76 @@ body {
 
 .lateral-profile-message {
   margin: 0;
-  max-width: 250px;
+  max-width: none;
   font-size: 0.82rem;
 }
 
 .lateral-profile-body {
   display: grid;
-  grid-template-columns: minmax(190px, 220px) minmax(0, 1fr);
-  gap: 0.65rem;
+  grid-template-columns: minmax(220px, 242px) minmax(0, 1fr);
+  gap: 0.55rem;
   flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
 
-.lateral-profile-info-rail {
+.lateral-profile-sidebar {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lateral-profile-data-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid #dbcdb4;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+}
+
+.lateral-profile-data-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding: 0.72rem 0.78rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #284152;
+  background: rgba(239, 232, 217, 0.78);
+  border-bottom: 1px solid rgba(203, 188, 163, 0.92);
+}
+
+.lateral-profile-data-summary::-webkit-details-marker {
+  display: none;
+}
+
+.lateral-profile-data-summary::after {
+  content: "▾";
+  font-size: 0.9rem;
+  color: #506775;
+}
+
+.lateral-profile-data-panel:not([open]) .lateral-profile-data-summary {
+  border-bottom-color: transparent;
+}
+
+.lateral-profile-data-panel:not([open]) .lateral-profile-data-summary::after {
+  transform: rotate(-90deg);
+}
+
+.lateral-profile-data-content {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding-right: 0.1rem;
-  align-self: start;
+  padding: 0.58rem;
 }
 
 .lateral-profile-card {
@@ -1795,12 +1844,14 @@ body {
   min-height: 0;
   display: flex;
   align-items: stretch;
+  overflow: hidden;
 }
 
 .lateral-profile-chart-shell {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 260px;
+  min-height: 0;
+  height: 100%;
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -1815,6 +1866,7 @@ body {
   width: 100%;
   height: 100%;
   min-height: 180px;
+  overflow: visible;
 }
 
 .lateral-profile-plot-bg {
@@ -2167,9 +2219,16 @@ body {
     width: 100%;
   }
 
-  .lateral-profile-info-rail {
+  .lateral-profile-sidebar {
     overflow: visible;
-    max-height: none;
+  }
+
+  .lateral-profile-data-panel {
+    height: auto;
+  }
+
+  .lateral-profile-data-content {
+    overflow: visible;
   }
 
   .lateral-profile-plot-panel {
