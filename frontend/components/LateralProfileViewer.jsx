@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const DEFAULT_PROFILE_WIDTH = 980;
-const DEFAULT_PROFILE_HEIGHT = 340;
+const DEFAULT_PROFILE_HEIGHT = 360;
 const MIN_PROFILE_WIDTH = 420;
-const MIN_PROFILE_HEIGHT = 220;
+const MIN_PROFILE_HEIGHT = 240;
 
 const GRID_STEPS = [5, 10, 20];
 
@@ -123,7 +123,7 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
     const left = clamp(Math.round(chartSize.width * 0.1), 88, 118);
     const right = clamp(Math.round(chartSize.width * 0.05), 62, 92);
     const top = clamp(Math.round(chartSize.height * 0.09), 24, 34);
-    const bottom = clamp(Math.round(chartSize.height * 0.17), 48, 62);
+    const bottom = clamp(Math.round(chartSize.height * 0.2), 60, 78);
 
     return {
       top,
@@ -302,35 +302,35 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
         </div>
       </div>
 
-      <div className="lateral-profile-toolbar">
-        <label className="mapper-field lateral-profile-start-field" htmlFor="lateral-start-md-input">
-          <span className="lateral-profile-start-label">Beginning of lateral MD (ft)</span>
-          <input
-            id="lateral-start-md-input"
-            type="number"
-            className="mapper-input lateral-profile-start-input"
-            value={draftStartMd}
-            onChange={(event) => setDraftStartMd(event.target.value)}
-            placeholder="Enter MD to begin 2D view"
-          />
-        </label>
-
-        <div className="lateral-profile-toolbar-actions">
-          <button type="button" className="secondary-btn" onClick={handleApplyStartMd}>
-            Update View
-          </button>
-          {selectedPointIndex !== null ? (
-            <button type="button" className="secondary-btn" onClick={() => onSelectPoint?.(null)}>
-              Clear Selected Point
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {inputError ? <p className="warning lateral-profile-message">{inputError}</p> : null}
-
       <div className="lateral-profile-body">
         <aside className="lateral-profile-info-rail" aria-label="2D lateral profile summary">
+          <div className="lateral-profile-controls">
+            <label className="mapper-field lateral-profile-start-field" htmlFor="lateral-start-md-input">
+              <span className="lateral-profile-start-label">Beginning of lateral MD (ft)</span>
+              <input
+                id="lateral-start-md-input"
+                type="number"
+                className="mapper-input lateral-profile-start-input"
+                value={draftStartMd}
+                onChange={(event) => setDraftStartMd(event.target.value)}
+                placeholder="Enter MD to begin 2D view"
+              />
+            </label>
+
+            <div className="lateral-profile-control-actions">
+              <button type="button" className="secondary-btn" onClick={handleApplyStartMd}>
+                Update View
+              </button>
+              {selectedPointIndex !== null ? (
+                <button type="button" className="secondary-btn" onClick={() => onSelectPoint?.(null)}>
+                  Clear Selected Point
+                </button>
+              ) : null}
+            </div>
+
+            {inputError ? <p className="warning lateral-profile-message">{inputError}</p> : null}
+          </div>
+
           <article className="lateral-profile-card">
             <p className="lateral-profile-card-title">Visible MD Window</p>
             <p className="lateral-profile-card-value">
@@ -452,7 +452,7 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
 
                 <text
                   x={(chartSize.width - chartPadding.right + chartPadding.left) / 2}
-                  y={chartSize.height - 12}
+                  y={chartSize.height - 18}
                   textAnchor="middle"
                   className="lateral-profile-axis-label"
                 >

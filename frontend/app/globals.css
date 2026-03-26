@@ -1693,7 +1693,8 @@ body {
 }
 
 .lateral-profile-start-field {
-  max-width: 320px;
+  width: 100%;
+  max-width: 250px;
 }
 
 .lateral-profile-start-label {
@@ -1709,6 +1710,23 @@ body {
   font-weight: 700;
 }
 
+.lateral-profile-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.lateral-profile-control-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.lateral-profile-control-actions .secondary-btn {
+  width: 100%;
+}
+
 .lateral-profile-toolbar-actions {
   display: inline-flex;
   align-items: center;
@@ -1718,6 +1736,8 @@ body {
 
 .lateral-profile-message {
   margin: 0;
+  max-width: 250px;
+  font-size: 0.82rem;
 }
 
 .lateral-profile-body {
@@ -1736,6 +1756,7 @@ body {
   min-height: 0;
   overflow: auto;
   padding-right: 0.1rem;
+  align-self: start;
 }
 
 .lateral-profile-card {
@@ -1773,19 +1794,20 @@ body {
   min-width: 0;
   min-height: 0;
   display: flex;
+  align-items: stretch;
 }
 
 .lateral-profile-chart-shell {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 0;
+  min-height: 260px;
   display: flex;
   align-items: stretch;
   justify-content: center;
   border: 1px solid #d8ccb7;
   border-radius: 12px;
   background: rgba(255, 253, 248, 0.92);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .lateral-profile-chart {
