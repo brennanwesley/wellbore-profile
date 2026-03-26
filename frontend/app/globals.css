@@ -1740,26 +1740,10 @@ body {
   font-size: 0.82rem;
 }
 
-.lateral-profile-body {
-  display: grid;
-  grid-template-columns: minmax(220px, 242px) minmax(0, 1fr);
-  gap: 0.55rem;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.lateral-profile-sidebar {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
 .lateral-profile-data-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  height: auto;
   border: 1px solid #dbcdb4;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.72);
@@ -1803,8 +1787,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  min-height: 0;
-  overflow: auto;
+  overflow: visible;
   padding: 0.58rem;
 }
 
@@ -1840,11 +1823,16 @@ body {
 }
 
 .lateral-profile-plot-panel {
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: flex;
   align-items: stretch;
   overflow: hidden;
+}
+
+.lateral-profile-plot-panel-full {
+  width: 100%;
 }
 
 .lateral-profile-chart-shell {
@@ -2217,10 +2205,6 @@ body {
   .lateral-profile-start-field {
     max-width: 100%;
     width: 100%;
-  }
-
-  .lateral-profile-sidebar {
-    overflow: visible;
   }
 
   .lateral-profile-data-panel {

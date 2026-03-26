@@ -67,11 +67,8 @@ function buildPath(points, getX, getY) {
     .join(" ");
 }
 
-export default function LateralProfileViewer({ points, selectedPointIndex = null, onSelectPoint }) {
-  const [draftStartMd, setDraftStartMd] = useState("");
-  const [appliedStartMd, setAppliedStartMd] = useState(null);
+export default function LateralProfileViewer({ points, appliedStartMd = null, selectedPointIndex = null, onSelectPoint }) {
   const [verticalGridStep, setVerticalGridStep] = useState(5);
-  const [inputError, setInputError] = useState("");
   const [chartSize, setChartSize] = useState({
     width: DEFAULT_PROFILE_WIDTH,
     height: DEFAULT_PROFILE_HEIGHT,
@@ -94,36 +91,11 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
       .sort((left, right) => left.md - right.md);
   }, [points]);
 
-  const mdBounds = useMemo(() => {
-    if (validPoints.length === 0) {
-      return { minMd: null, maxMd: null };
-    }
-
-    return {
-      minMd: validPoints[0].md,
-      maxMd: validPoints[validPoints.length - 1].md,
-    };
-  }, [validPoints]);
-
-  useEffect(() => {
-    if (validPoints.length === 0) {
-      setDraftStartMd("");
-      setAppliedStartMd(null);
-      setInputError("");
-      return;
-    }
-
-    const defaultStartMd = validPoints[0].md;
-    setDraftStartMd(String(defaultStartMd));
-    setAppliedStartMd(defaultStartMd);
-    setInputError("");
-  }, [validPoints]);
-
   const chartPadding = useMemo(() => {
     const left = clamp(Math.round(chartSize.width * 0.1), 88, 118);
     const right = clamp(Math.round(chartSize.width * 0.05), 62, 92);
     const top = clamp(Math.round(chartSize.height * 0.09), 24, 34);
-    const bottom = clamp(Math.round(chartSize.height * 0.2), 60, 78);
+    const bottom = clamp(Math.round(chartSize.height * 0.23), 72, 92);
 
     return {
       top,
@@ -256,26 +228,6 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
     };
   }, [canRenderChart]);
 
-  const selectedOutsideRange = selectedPointIndex !== null && selectedProfilePoint === null;
-
-  const handleApplyStartMd = () => {
-    if (mdBounds.minMd === null || mdBounds.maxMd === null) {
-      return;
-    }
-
-    const parsedStartMd = toFiniteNumber(draftStartMd);
-
-    if (parsedStartMd === null) {
-      setInputError("Enter a numeric MD to begin the 2D lateral view.");
-      return;
-    }
-
-    const clampedStartMd = clamp(parsedStartMd, mdBounds.minMd, mdBounds.maxMd);
-    setAppliedStartMd(clampedStartMd);
-    setDraftStartMd(String(clampedStartMd));
-    setInputError("");
-  };
-
   if (validPoints.length < 2) {
     return <div className="lateral-profile-empty">Upload a valid trajectory to inspect the lateral profile.</div>;
   }
@@ -299,87 +251,7 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
         </div>
       </div>
 
-      <div className="lateral-profile-body">
-        <aside className="lateral-profile-sidebar" aria-label="2D lateral profile data">
-          <details className="lateral-profile-data-panel" open>
-            <summary className="lateral-profile-data-summary">Lateral Profile Data</summary>
-
-            <div className="lateral-profile-data-content">
-              <div className="lateral-profile-controls">
-                <label className="mapper-field lateral-profile-start-field" htmlFor="lateral-start-md-input">
-                  <span className="lateral-profile-start-label">Beginning of lateral MD (ft)</span>
-                  <input
-                    id="lateral-start-md-input"
-                    type="number"
-                    className="mapper-input lateral-profile-start-input"
-                    value={draftStartMd}
-                    onChange={(event) => setDraftStartMd(event.target.value)}
-                    placeholder="Enter MD to begin 2D view"
-                  />
-                </label>
-
-                <div className="lateral-profile-control-actions">
-                  <button type="button" className="secondary-btn" onClick={handleApplyStartMd}>
-                    Update View
-                  </button>
-                  {selectedPointIndex !== null ? (
-                    <button type="button" className="secondary-btn" onClick={() => onSelectPoint?.(null)}>
-                      Clear Selected Point
-                    </button>
-                  ) : null}
-                </div>
-
-                {inputError ? <p className="warning lateral-profile-message">{inputError}</p> : null}
-              </div>
-
-              <article className="lateral-profile-card">
-                <p className="lateral-profile-card-title">Visible MD Window</p>
-                <p className="lateral-profile-card-value">
-                  {formatNumber(appliedStartMd, 0)} - {formatNumber(chartMetrics?.maxMd, 0)} ft
-                </p>
-              </article>
-
-              <article className="lateral-profile-card">
-                <p className="lateral-profile-card-title">Visible TVD Delta</p>
-                <p className="lateral-profile-card-value">{formatNumber(chartMetrics?.tvdDelta, 2)} ft</p>
-              </article>
-
-              <article className="lateral-profile-card">
-                <p className="lateral-profile-card-title">Selected MD</p>
-                <p className="lateral-profile-card-value">
-                  {selectedProfilePoint ? `${formatNumber(selectedProfilePoint.md, 1)} ft` : "—"}
-                </p>
-              </article>
-
-              <article className="lateral-profile-card">
-                <p className="lateral-profile-card-title">Shallowest Visible Point</p>
-                <p className="lateral-profile-card-detail">
-                  MD {formatNumber(shallowestPoint?.md, 1)} ft | TVD {formatNumber(shallowestPoint?.tvd, 2)} ft
-                </p>
-              </article>
-
-              <article className="lateral-profile-card">
-                <p className="lateral-profile-card-title">Deepest Visible Point</p>
-                <p className="lateral-profile-card-detail">
-                  MD {formatNumber(deepestPoint?.md, 1)} ft | TVD {formatNumber(deepestPoint?.tvd, 2)} ft
-                </p>
-              </article>
-
-              <article className="lateral-profile-card">
-                <p className="lateral-profile-card-title">Selected Survey Point</p>
-                <p className="lateral-profile-card-detail">
-                  {selectedProfilePoint
-                    ? `MD ${formatNumber(selectedProfilePoint.md, 1)} ft | TVD ${formatNumber(selectedProfilePoint.tvd, 2)} ft`
-                    : selectedOutsideRange
-                      ? "Selected point is outside the current lateral MD window."
-                      : "Click a point in 2D or 3D to inspect it here."}
-                </p>
-              </article>
-            </div>
-          </details>
-        </aside>
-
-        <div className="lateral-profile-plot-panel">
+      <div className="lateral-profile-plot-panel lateral-profile-plot-panel-full">
           {canRenderChart ? (
             <div ref={chartShellRef} className="lateral-profile-chart-shell">
               <svg
@@ -428,7 +300,7 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
                       />
                       <text
                         x={x}
-                        y={chartSize.height - chartPadding.bottom + 18}
+                        y={chartSize.height - chartPadding.bottom + 16}
                         textAnchor="middle"
                         className="lateral-profile-axis-text"
                       >
@@ -455,7 +327,7 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
 
                 <text
                   x={(chartSize.width - chartPadding.right + chartPadding.left) / 2}
-                  y={chartSize.height - 26}
+                  y={chartSize.height - 32}
                   textAnchor="middle"
                   className="lateral-profile-axis-label"
                 >
@@ -501,7 +373,6 @@ export default function LateralProfileViewer({ points, selectedPointIndex = null
           ) : (
             <div className="lateral-profile-empty">The selected MD window does not contain enough survey points to draw a lateral profile.</div>
           )}
-        </div>
       </div>
     </section>
   );

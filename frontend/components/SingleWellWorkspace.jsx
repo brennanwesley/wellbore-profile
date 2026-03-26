@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LateralProfileViewer from "@/components/LateralProfileViewer";
 import WellTrajectoryViewer from "@/components/WellTrajectoryViewer";
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
@@ -16,6 +16,29 @@ function hasMetadataValue(value) {
 
 function clamp(value, minValue, maxValue) {
   return Math.min(Math.max(value, minValue), maxValue);
+}
+
+function toFiniteNumber(value) {
+  const cleaned = String(value ?? "").replace(/,/g, "").trim();
+  if (!cleaned) {
+    return null;
+  }
+
+  const numericValue = Number(cleaned);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function formatNumber(value, digits = 1) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return "—";
+  }
+
+  return numericValue.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 function normalizeMetadataSuggestions(metadataSuggestions) {
@@ -65,6 +88,9 @@ function createFormationRow(index = 0) {
 export default function SingleWellWorkspace() {
   const [points, setPoints] = useState([]);
   const [selectedPointIndex, setSelectedPointIndex] = useState(null);
+  const [lateralDraftStartMd, setLateralDraftStartMd] = useState("");
+  const [lateralAppliedStartMd, setLateralAppliedStartMd] = useState(null);
+  const [lateralInputError, setLateralInputError] = useState("");
   const [viewerTopSplit, setViewerTopSplit] = useState(DEFAULT_VIEWER_TOP_SPLIT);
   const [isViewerSplitDragging, setIsViewerSplitDragging] = useState(false);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
@@ -122,6 +148,9 @@ export default function SingleWellWorkspace() {
   const clearWorkspace = useCallback(() => {
     setPoints([]);
     setSelectedPointIndex(null);
+    setLateralDraftStartMd("");
+    setLateralAppliedStartMd(null);
+    setLateralInputError("");
     setViewerTopSplit(DEFAULT_VIEWER_TOP_SPLIT);
     setWellMetadata(INITIAL_METADATA);
     setFormations([]);
@@ -188,6 +217,112 @@ export default function SingleWellWorkspace() {
     };
   }, [isViewerSplitDragging]);
 
+  const validLateralPoints = useMemo(() => {
+    if (!Array.isArray(points)) {
+      return [];
+    }
+
+    return points
+      .map((point, index) => ({
+        ...point,
+        pointIndex: Number.isInteger(point?.pointIndex) ? point.pointIndex : index,
+        md: toFiniteNumber(point?.md),
+        tvd: toFiniteNumber(point?.tvd ?? point?.z),
+      }))
+      .filter((point) => point.md !== null && point.tvd !== null)
+      .sort((left, right) => left.md - right.md);
+  }, [points]);
+
+  const lateralMdBounds = useMemo(() => {
+    if (validLateralPoints.length === 0) {
+      return { minMd: null, maxMd: null };
+    }
+
+    return {
+      minMd: validLateralPoints[0].md,
+      maxMd: validLateralPoints[validLateralPoints.length - 1].md,
+    };
+  }, [validLateralPoints]);
+
+  useEffect(() => {
+    if (validLateralPoints.length === 0) {
+      setLateralDraftStartMd("");
+      setLateralAppliedStartMd(null);
+      setLateralInputError("");
+      return;
+    }
+
+    const defaultStartMd = validLateralPoints[0].md;
+    setLateralDraftStartMd(String(defaultStartMd));
+    setLateralAppliedStartMd(defaultStartMd);
+    setLateralInputError("");
+  }, [validLateralPoints]);
+
+  const visibleLateralPoints = useMemo(() => {
+    if (lateralAppliedStartMd === null) {
+      return validLateralPoints;
+    }
+
+    return validLateralPoints.filter((point) => point.md >= lateralAppliedStartMd);
+  }, [lateralAppliedStartMd, validLateralPoints]);
+
+  const selectedVisibleLateralPoint = useMemo(
+    () => visibleLateralPoints.find((point) => point.pointIndex === selectedPointIndex) ?? null,
+    [visibleLateralPoints, selectedPointIndex],
+  );
+
+  const shallowestVisibleLateralPoint = useMemo(() => {
+    if (visibleLateralPoints.length === 0) {
+      return null;
+    }
+
+    return visibleLateralPoints.reduce(
+      (shallowest, point) => (point.tvd < shallowest.tvd ? point : shallowest),
+      visibleLateralPoints[0],
+    );
+  }, [visibleLateralPoints]);
+
+  const deepestVisibleLateralPoint = useMemo(() => {
+    if (visibleLateralPoints.length === 0) {
+      return null;
+    }
+
+    return visibleLateralPoints.reduce(
+      (deepest, point) => (point.tvd > deepest.tvd ? point : deepest),
+      visibleLateralPoints[0],
+    );
+  }, [visibleLateralPoints]);
+
+  const visibleLateralTvdDelta = useMemo(() => {
+    if (visibleLateralPoints.length === 0) {
+      return null;
+    }
+
+    const minTvd = Math.min(...visibleLateralPoints.map((point) => point.tvd));
+    const maxTvd = Math.max(...visibleLateralPoints.map((point) => point.tvd));
+    return maxTvd - minTvd;
+  }, [visibleLateralPoints]);
+
+  const selectedLateralOutsideRange = selectedPointIndex !== null && selectedVisibleLateralPoint === null;
+
+  const handleApplyLateralStartMd = useCallback(() => {
+    if (lateralMdBounds.minMd === null || lateralMdBounds.maxMd === null) {
+      return;
+    }
+
+    const parsedStartMd = toFiniteNumber(lateralDraftStartMd);
+
+    if (parsedStartMd === null) {
+      setLateralInputError("Enter a numeric MD to begin the 2D lateral view.");
+      return;
+    }
+
+    const clampedStartMd = clamp(parsedStartMd, lateralMdBounds.minMd, lateralMdBounds.maxMd);
+    setLateralAppliedStartMd(clampedStartMd);
+    setLateralDraftStartMd(String(clampedStartMd));
+    setLateralInputError("");
+  }, [lateralDraftStartMd, lateralMdBounds.maxMd, lateralMdBounds.minMd]);
+
   const hasEnoughPoints = points.length >= 2;
   const titleWellName = wellMetadata.wellName || "Upload Directional Survey";
 
@@ -253,6 +388,83 @@ export default function SingleWellWorkspace() {
         </section>
 
         <SurveyImportMapper key={importMapperKey} onApplyTrajectory={handleApplyTrajectory} />
+
+        <details className="lateral-profile-data-panel" open>
+          <summary className="lateral-profile-data-summary">Lateral Profile Data</summary>
+
+          <div className="lateral-profile-data-content">
+            <div className="lateral-profile-controls">
+              <label className="mapper-field lateral-profile-start-field" htmlFor="lateral-start-md-input">
+                <span className="lateral-profile-start-label">Beginning of lateral MD (ft)</span>
+                <input
+                  id="lateral-start-md-input"
+                  type="number"
+                  className="mapper-input lateral-profile-start-input"
+                  value={lateralDraftStartMd}
+                  onChange={(event) => setLateralDraftStartMd(event.target.value)}
+                  placeholder="Enter MD to begin 2D view"
+                />
+              </label>
+
+              <div className="lateral-profile-control-actions">
+                <button type="button" className="secondary-btn" onClick={handleApplyLateralStartMd}>
+                  Update View
+                </button>
+                {selectedPointIndex !== null ? (
+                  <button type="button" className="secondary-btn" onClick={() => setSelectedPointIndex(null)}>
+                    Clear Selected Point
+                  </button>
+                ) : null}
+              </div>
+
+              {lateralInputError ? <p className="warning lateral-profile-message">{lateralInputError}</p> : null}
+            </div>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Visible MD Window</p>
+              <p className="lateral-profile-card-value">
+                {formatNumber(lateralAppliedStartMd, 0)} - {formatNumber(visibleLateralPoints[visibleLateralPoints.length - 1]?.md, 0)} ft
+              </p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Visible TVD Delta</p>
+              <p className="lateral-profile-card-value">{formatNumber(visibleLateralTvdDelta, 2)} ft</p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Selected MD</p>
+              <p className="lateral-profile-card-value">
+                {selectedVisibleLateralPoint ? `${formatNumber(selectedVisibleLateralPoint.md, 1)} ft` : "—"}
+              </p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Shallowest Visible Point</p>
+              <p className="lateral-profile-card-detail">
+                MD {formatNumber(shallowestVisibleLateralPoint?.md, 1)} ft | TVD {formatNumber(shallowestVisibleLateralPoint?.tvd, 2)} ft
+              </p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Deepest Visible Point</p>
+              <p className="lateral-profile-card-detail">
+                MD {formatNumber(deepestVisibleLateralPoint?.md, 1)} ft | TVD {formatNumber(deepestVisibleLateralPoint?.tvd, 2)} ft
+              </p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Selected Survey Point</p>
+              <p className="lateral-profile-card-detail">
+                {selectedVisibleLateralPoint
+                  ? `MD ${formatNumber(selectedVisibleLateralPoint.md, 1)} ft | TVD ${formatNumber(selectedVisibleLateralPoint.tvd, 2)} ft`
+                  : selectedLateralOutsideRange
+                    ? "Selected point is outside the current lateral MD window."
+                    : "Click a point in 2D or 3D to inspect it here."}
+              </p>
+            </article>
+          </div>
+        </details>
 
         <section className="formation-block" aria-label="Formation intervals">
           <div className="formation-header">
@@ -434,6 +646,7 @@ export default function SingleWellWorkspace() {
           <div className="viewer-pane viewer-pane-2d">
             <LateralProfileViewer
               points={points}
+              appliedStartMd={lateralAppliedStartMd}
               selectedPointIndex={selectedPointIndex}
               onSelectPoint={setSelectedPointIndex}
             />
