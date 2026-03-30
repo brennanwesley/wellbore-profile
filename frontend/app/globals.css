@@ -1275,6 +1275,34 @@ body {
   border-bottom: 0;
 }
 
+.viewer-pane-3d-stack {
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.55rem 0.72rem 0;
+  background: linear-gradient(180deg, rgba(255, 250, 242, 0.98) 0%, rgba(251, 245, 233, 0.94) 100%);
+}
+
+.viewer-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem;
+  border: 1px solid rgba(209, 194, 170, 0.92);
+  border-radius: 999px;
+  background: rgba(244, 236, 223, 0.9);
+}
+
+.viewer-pane-3d-content {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .viewer-pane-2d {
   background: linear-gradient(180deg, rgba(254, 250, 243, 0.96) 0%, rgba(247, 240, 226, 0.98) 100%);
 }

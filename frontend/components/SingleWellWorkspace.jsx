@@ -88,9 +88,13 @@ function createFormationRow(index = 0) {
 export default function SingleWellWorkspace() {
   const [points, setPoints] = useState([]);
   const [selectedPointIndex, setSelectedPointIndex] = useState(null);
+  const [viewerProfileMode, setViewerProfileMode] = useState("wellbore");
   const [lateralDraftStartMd, setLateralDraftStartMd] = useState("");
   const [lateralAppliedStartMd, setLateralAppliedStartMd] = useState(null);
   const [lateralInputError, setLateralInputError] = useState("");
+  const [verticalDraftEndMd, setVerticalDraftEndMd] = useState("");
+  const [verticalAppliedEndMd, setVerticalAppliedEndMd] = useState(null);
+  const [verticalInputError, setVerticalInputError] = useState("");
   const [viewerTopSplit, setViewerTopSplit] = useState(DEFAULT_VIEWER_TOP_SPLIT);
   const [isViewerSplitDragging, setIsViewerSplitDragging] = useState(false);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
@@ -148,9 +152,13 @@ export default function SingleWellWorkspace() {
   const clearWorkspace = useCallback(() => {
     setPoints([]);
     setSelectedPointIndex(null);
+    setViewerProfileMode("wellbore");
     setLateralDraftStartMd("");
     setLateralAppliedStartMd(null);
     setLateralInputError("");
+    setVerticalDraftEndMd("");
+    setVerticalAppliedEndMd(null);
+    setVerticalInputError("");
     setViewerTopSplit(DEFAULT_VIEWER_TOP_SPLIT);
     setWellMetadata(INITIAL_METADATA);
     setFormations([]);
@@ -258,6 +266,13 @@ export default function SingleWellWorkspace() {
     setLateralInputError("");
   }, [validLateralPoints]);
 
+  useEffect(() => {
+    setViewerProfileMode("wellbore");
+    setVerticalDraftEndMd("");
+    setVerticalAppliedEndMd(null);
+    setVerticalInputError("");
+  }, [validLateralPoints]);
+
   const visibleLateralPoints = useMemo(() => {
     if (lateralAppliedStartMd === null) {
       return validLateralPoints;
@@ -305,6 +320,32 @@ export default function SingleWellWorkspace() {
 
   const selectedLateralOutsideRange = selectedPointIndex !== null && selectedVisibleLateralPoint === null;
 
+  const visibleVerticalPoints = useMemo(() => {
+    if (verticalAppliedEndMd === null) {
+      return [];
+    }
+
+    return validLateralPoints.filter((point) => point.md <= verticalAppliedEndMd);
+  }, [validLateralPoints, verticalAppliedEndMd]);
+
+  const selectedVisibleVerticalPoint = useMemo(
+    () => visibleVerticalPoints.find((point) => point.pointIndex === selectedPointIndex) ?? null,
+    [selectedPointIndex, visibleVerticalPoints],
+  );
+
+  const visibleVerticalTvdDelta = useMemo(() => {
+    if (visibleVerticalPoints.length === 0) {
+      return null;
+    }
+
+    const minTvd = Math.min(...visibleVerticalPoints.map((point) => point.tvd));
+    const maxTvd = Math.max(...visibleVerticalPoints.map((point) => point.tvd));
+    return maxTvd - minTvd;
+  }, [visibleVerticalPoints]);
+
+  const selectedVerticalOutsideRange =
+    selectedPointIndex !== null && verticalAppliedEndMd !== null && selectedVisibleVerticalPoint === null;
+
   const handleApplyLateralStartMd = useCallback(() => {
     if (lateralMdBounds.minMd === null || lateralMdBounds.maxMd === null) {
       return;
@@ -323,7 +364,43 @@ export default function SingleWellWorkspace() {
     setLateralInputError("");
   }, [lateralDraftStartMd, lateralMdBounds.maxMd, lateralMdBounds.minMd]);
 
-  const hasEnoughPoints = points.length >= 2;
+  const handleApplyVerticalEndMd = useCallback(() => {
+    if (lateralMdBounds.minMd === null || lateralMdBounds.maxMd === null) {
+      return;
+    }
+
+    const parsedEndMd = toFiniteNumber(verticalDraftEndMd);
+
+    if (parsedEndMd === null) {
+      setVerticalInputError("Enter a numeric MD to end the vertical profile view.");
+      return;
+    }
+
+    const clampedEndMd = clamp(parsedEndMd, lateralMdBounds.minMd, lateralMdBounds.maxMd);
+    setVerticalAppliedEndMd(clampedEndMd);
+    setVerticalDraftEndMd(String(clampedEndMd));
+    setVerticalInputError("");
+    setViewerProfileMode("vertical");
+  }, [lateralMdBounds.maxMd, lateralMdBounds.minMd, verticalDraftEndMd]);
+
+  const activeViewerPoints = useMemo(
+    () => (viewerProfileMode === "vertical" ? visibleVerticalPoints : validLateralPoints),
+    [validLateralPoints, viewerProfileMode, visibleVerticalPoints],
+  );
+
+  const viewerEmptyStateMessage = useMemo(() => {
+    if (viewerProfileMode === "vertical") {
+      if (verticalAppliedEndMd === null) {
+        return "Enter End of Vertical MD (ft) and click Update View to open the vertical profile.";
+      }
+
+      return "The selected vertical MD window does not contain enough survey points to render.";
+    }
+
+    return "No valid trajectory to render yet.";
+  }, [viewerProfileMode, verticalAppliedEndMd]);
+
+  const hasEnoughPoints = validLateralPoints.length >= 2;
   const titleWellName = wellMetadata.wellName || "Upload Directional Survey";
 
   return (
@@ -466,6 +543,66 @@ export default function SingleWellWorkspace() {
           </div>
         </details>
 
+        <details className="lateral-profile-data-panel" open>
+          <summary className="lateral-profile-data-summary">Vertical Profile Data</summary>
+
+          <div className="lateral-profile-data-content">
+            <div className="lateral-profile-controls">
+              <label className="mapper-field lateral-profile-start-field" htmlFor="vertical-end-md-input">
+                <span className="lateral-profile-start-label">End of Vertical MD (ft)</span>
+                <input
+                  id="vertical-end-md-input"
+                  type="number"
+                  className="mapper-input lateral-profile-start-input"
+                  value={verticalDraftEndMd}
+                  onChange={(event) => setVerticalDraftEndMd(event.target.value)}
+                  placeholder="Enter MD to end 3D view"
+                />
+              </label>
+
+              <div className="lateral-profile-control-actions">
+                <button type="button" className="secondary-btn" onClick={handleApplyVerticalEndMd}>
+                  Update View
+                </button>
+                {selectedPointIndex !== null ? (
+                  <button type="button" className="secondary-btn" onClick={() => setSelectedPointIndex(null)}>
+                    Clear Selected Point
+                  </button>
+                ) : null}
+              </div>
+
+              {verticalInputError ? <p className="warning lateral-profile-message">{verticalInputError}</p> : null}
+            </div>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Visible MD Window</p>
+              <p className="lateral-profile-card-value">
+                {verticalAppliedEndMd === null
+                  ? "—"
+                  : `${formatNumber(validLateralPoints[0]?.md, 0)} - ${formatNumber(visibleVerticalPoints[visibleVerticalPoints.length - 1]?.md, 0)} ft`}
+              </p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Visible TVD Delta</p>
+              <p className="lateral-profile-card-value">{formatNumber(visibleVerticalTvdDelta, 2)} ft</p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Selected Survey Point</p>
+              <p className="lateral-profile-card-detail">
+                {selectedVisibleVerticalPoint
+                  ? `MD ${formatNumber(selectedVisibleVerticalPoint.md, 1)} ft | TVD ${formatNumber(selectedVisibleVerticalPoint.tvd, 2)} ft`
+                  : verticalAppliedEndMd === null
+                    ? "Apply an end MD to inspect the vertical profile."
+                    : selectedVerticalOutsideRange
+                      ? "Selected point is outside the current vertical MD window."
+                      : "Click a point in 3D to inspect it here."}
+              </p>
+            </article>
+          </div>
+        </details>
+
         <section className="formation-block" aria-label="Formation intervals">
           <div className="formation-header">
             <p className="metadata-title">Formation Intervals TVD (ft)</p>
@@ -602,13 +739,41 @@ export default function SingleWellWorkspace() {
           className={`viewer-workspace ${isViewerSplitDragging ? "is-resizing" : ""}`}
           style={{ "--viewer-top-split": `${viewerTopSplit}%` }}
         >
-          <div className="viewer-pane viewer-pane-3d">
-            <WellTrajectoryViewer
-              points={points}
-              formations={formations}
-              selectedPointIndex={selectedPointIndex}
-              onSelectPoint={setSelectedPointIndex}
-            />
+          <div className="viewer-pane viewer-pane-3d viewer-pane-3d-stack">
+            <div className="viewer-mode-bar" aria-label="3D viewer mode switch">
+              <div className="viewer-mode-switch" role="tablist" aria-label="3D viewer profile mode">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewerProfileMode === "wellbore"}
+                  className={`viewer-tool-btn ${viewerProfileMode === "wellbore" ? "is-active" : ""}`}
+                  onClick={() => setViewerProfileMode("wellbore")}
+                >
+                  Wellbore Profile
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewerProfileMode === "vertical"}
+                  className={`viewer-tool-btn ${viewerProfileMode === "vertical" ? "is-active" : ""}`}
+                  onClick={() => setViewerProfileMode("vertical")}
+                >
+                  Vertical Profile
+                </button>
+              </div>
+            </div>
+
+            <div className="viewer-pane-3d-content">
+              <WellTrajectoryViewer
+                points={activeViewerPoints}
+                formations={viewerProfileMode === "wellbore" ? formations : []}
+                selectedPointIndex={selectedPointIndex}
+                onSelectPoint={setSelectedPointIndex}
+                profileMode={viewerProfileMode}
+                depthGuideStep={viewerProfileMode === "vertical" ? 20 : 1000}
+                emptyStateMessage={viewerEmptyStateMessage}
+              />
+            </div>
           </div>
 
           <button

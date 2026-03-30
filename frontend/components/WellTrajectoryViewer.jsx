@@ -114,6 +114,9 @@ export default function WellTrajectoryViewer({
   formations = [],
   selectedPointIndex = null,
   onSelectPoint,
+  profileMode = "wellbore",
+  depthGuideStep = COARSE_DEPTH_GUIDE_STEP,
+  emptyStateMessage = "No valid trajectory to render yet.",
 }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
   const [showDepthGuides, setShowDepthGuides] = useState(true);
@@ -123,16 +126,38 @@ export default function WellTrajectoryViewer({
   const [spinAxis, setSpinAxis] = useState("z");
   const [spinSpeed, setSpinSpeed] = useState(0.45);
   const [viewerResetKey, setViewerResetKey] = useState(0);
-  const depthGuideStep = COARSE_DEPTH_GUIDE_STEP;
 
   const orbitControlsRef = useRef(null);
-  const hasEnoughPoints = Array.isArray(points) && points.length >= 2;
+  const normalizedPoints = useMemo(
+    () =>
+      Array.isArray(points)
+        ? points.map((point, index) => ({
+            ...point,
+            pointIndex: Number.isInteger(point?.pointIndex) ? point.pointIndex : index,
+          }))
+        : [],
+    [points],
+  );
+  const hasEnoughPoints = normalizedPoints.length >= 2;
+  const isVerticalProfileMode = profileMode === "vertical";
 
   useEffect(() => {
-    if (hoverPointIndex !== null && (hoverPointIndex < 0 || hoverPointIndex >= points.length)) {
+    if (hoverPointIndex !== null && !normalizedPoints.some((point) => point.pointIndex === hoverPointIndex)) {
       setHoverPointIndex(null);
     }
-  }, [hoverPointIndex, points.length]);
+  }, [hoverPointIndex, normalizedPoints]);
+
+  useEffect(() => {
+    setViewerResetKey((previous) => previous + 1);
+    setSpinEnabled(false);
+    setHoverPointIndex(null);
+    setShowDepthGuides(true);
+    setShowDepthLabels(true);
+    setViewMode(isVerticalProfileMode ? "free" : "isometric");
+    if (isVerticalProfileMode) {
+      setSpinAxis("z");
+    }
+  }, [isVerticalProfileMode, points]);
 
   const { center, span, bounds } = useMemo(() => {
     if (!hasEnoughPoints) {
@@ -154,8 +179,8 @@ export default function WellTrajectoryViewer({
   }, [hasEnoughPoints, points]);
 
   const linePoints = useMemo(
-    () => (hasEnoughPoints ? points.map((point) => [point.x, point.y, -point.z]) : []),
-    [hasEnoughPoints, points],
+    () => (hasEnoughPoints ? normalizedPoints.map((point) => [point.x, point.y, -point.z]) : []),
+    [hasEnoughPoints, normalizedPoints],
   );
 
   const shallowestTvd = useMemo(() => {
@@ -163,7 +188,7 @@ export default function WellTrajectoryViewer({
       return 0;
     }
 
-    const tvdValues = points
+    const tvdValues = normalizedPoints
       .map((point) => toFiniteNumber(point.tvd ?? point.z))
       .filter((value) => value !== null);
 
@@ -172,7 +197,7 @@ export default function WellTrajectoryViewer({
     }
 
     return Math.min(...tvdValues);
-  }, [hasEnoughPoints, points]);
+  }, [hasEnoughPoints, normalizedPoints]);
 
   const surfaceGridZ = -shallowestTvd;
 
@@ -181,7 +206,7 @@ export default function WellTrajectoryViewer({
       return { minTvd: 0, maxTvd: 0, tvdTicks: [0] };
     }
 
-    const tvdValues = points
+    const tvdValues = normalizedPoints
       .map((point) => toFiniteNumber(point.tvd ?? point.z))
       .filter((value) => value !== null);
 
@@ -205,14 +230,14 @@ export default function WellTrajectoryViewer({
       maxTvd: localMaxTvd,
       tvdTicks: ticks,
     };
-  }, [depthGuideStep, hasEnoughPoints, points]);
+  }, [depthGuideStep, hasEnoughPoints, normalizedPoints]);
 
   const depthGuides = useMemo(() => {
     if (!hasEnoughPoints || tvdTicks.length === 0) {
       return [];
     }
 
-    const mdTvdPairs = points
+    const mdTvdPairs = normalizedPoints
       .map((point) => ({
         md: toFiniteNumber(point.md),
         tvd: toFiniteNumber(point.tvd ?? point.z),
@@ -261,7 +286,7 @@ export default function WellTrajectoryViewer({
       md: estimateMdAtTvd(tvdValue),
       z: -tvdValue,
     }));
-  }, [hasEnoughPoints, points, tvdTicks]);
+  }, [hasEnoughPoints, normalizedPoints, tvdTicks]);
 
   const formationIntervals = useMemo(() => {
     if (!hasEnoughPoints || !Array.isArray(formations) || formations.length === 0) {
@@ -285,7 +310,7 @@ export default function WellTrajectoryViewer({
       const segments = [];
       let activeSegment = [];
 
-      points.forEach((point, pointIndex) => {
+      normalizedPoints.forEach((point, pointIndex) => {
         const pointTvd = toFiniteNumber(point.tvd ?? point.z);
         const inInterval = pointTvd !== null && pointTvd >= minDepth && pointTvd <= maxDepth;
 
@@ -326,16 +351,17 @@ export default function WellTrajectoryViewer({
 
       return acc;
     }, []);
-  }, [bounds.maxX, bounds.maxY, bounds.minX, bounds.minY, center, formations, hasEnoughPoints, linePoints, points, span]);
+  }, [bounds.maxX, bounds.maxY, bounds.minX, bounds.minY, center, formations, hasEnoughPoints, linePoints, normalizedPoints, span]);
 
   const activePointIndex = selectedPointIndex ?? hoverPointIndex;
   const activePoint =
-    activePointIndex !== null && activePointIndex >= 0 && activePointIndex < points.length
-      ? points[activePointIndex]
-      : null;
+    activePointIndex !== null ? normalizedPoints.find((point) => point.pointIndex === activePointIndex) ?? null : null;
   const activePosition =
-    activePointIndex !== null && activePointIndex >= 0 && activePointIndex < linePoints.length
-      ? linePoints[activePointIndex]
+    activePointIndex !== null
+      ? (() => {
+          const pointIndex = normalizedPoints.findIndex((point) => point.pointIndex === activePointIndex);
+          return pointIndex >= 0 && pointIndex < linePoints.length ? linePoints[pointIndex] : null;
+        })()
       : null;
 
   const resetViewerCamera = useCallback(() => {
@@ -348,14 +374,16 @@ export default function WellTrajectoryViewer({
   const usingIsometricMode = viewMode === "isometric";
 
   if (!hasEnoughPoints) {
-    return <div className="viewer-empty">No valid trajectory to render yet.</div>;
+    return <div className="viewer-empty">{emptyStateMessage}</div>;
   }
 
   const pointMarkerRadius = Math.max(span * 0.006, 1.6);
   const endpointRadius = Math.max(span * 0.018, 6);
   const axisLength = span * 0.8;
   const axisOrigin = [center[0], center[1], surfaceGridZ];
-  const initialCameraPosition = [center[0] + span * 1.4, center[1] + span * 0.8, center[2] + span * 1.4];
+  const initialCameraPosition = isVerticalProfileMode
+    ? [center[0] + Math.max(span * 0.22, 18), bounds.minY - span * 1.85, center[2] + Math.max(span * 0.32, 24)]
+    : [center[0] + span * 1.4, center[1] + span * 0.8, center[2] + span * 1.4];
   const depthGuidePadding = Math.max(span * 0.08, 12);
   const depthGuideXStart = bounds.minX - depthGuidePadding;
   const depthGuideXEnd = bounds.maxX + depthGuidePadding;
@@ -366,6 +394,13 @@ export default function WellTrajectoryViewer({
   const depthTickHalfWidth = Math.max(span * 0.014, 2);
   const depthGuideLabelX = depthGuideXEnd + Math.max(depthGuidePadding * 0.12, 4);
   const depthGuideLabelY = center[1];
+  const verticalReferencePoints =
+    isVerticalProfileMode && linePoints.length > 0
+      ? [
+          [linePoints[0][0], linePoints[0][1], -minTvd],
+          [linePoints[0][0], linePoints[0][1], -maxTvd],
+        ]
+      : [];
 
   return (
     <div className="viewer-canvas">
@@ -391,7 +426,7 @@ export default function WellTrajectoryViewer({
           <axesHelper args={[axisLength]} />
         </group>
         <gridHelper
-          args={[span * 2, 20, "#688597", "#b6c3cc"]}
+          args={[span * 2, isVerticalProfileMode ? Math.max(Math.round(span / Math.max(depthGuideStep, 1)), 12) : 20, "#688597", "#b6c3cc"]}
           position={[center[0], center[1], surfaceGridZ]}
           rotation={[Math.PI / 2, 0, 0]}
         />
@@ -452,7 +487,16 @@ export default function WellTrajectoryViewer({
           <div className="depth-axis-title">TVD</div>
         </Html>
 
-        <Line points={linePoints} color="#0f7b8a" lineWidth={3} />
+        {verticalReferencePoints.length === 2 ? (
+          <>
+            <Line points={verticalReferencePoints} color="#9b5c58" lineWidth={1.8} />
+            <Html position={verticalReferencePoints[0]} center distanceFactor={18}>
+              <div className="axis-tag axis-tag-reference">Vertical Reference</div>
+            </Html>
+          </>
+        ) : null}
+
+        <Line points={linePoints} color={isVerticalProfileMode ? "#1d6d8d" : "#0f7b8a"} lineWidth={3} />
 
         {formationIntervals.map((formation) => (
           <mesh key={`${formation.id}-volume`} position={formation.volume.position}>
@@ -479,28 +523,40 @@ export default function WellTrajectoryViewer({
 
         {linePoints.map((position, index) => (
           <mesh
-            key={`pt-${index}`}
+            key={`pt-${normalizedPoints[index]?.pointIndex ?? index}`}
             position={position}
             onPointerDown={(event) => {
               event.stopPropagation();
-              onSelectPoint?.(selectedPointIndex === index ? null : index);
+              const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
+              onSelectPoint?.(selectedPointIndex === pointIdentifier ? null : pointIdentifier);
             }}
             onPointerOver={(event) => {
               event.stopPropagation();
-              setHoverPointIndex(index);
+              setHoverPointIndex(normalizedPoints[index]?.pointIndex ?? index);
             }}
             onPointerOut={(event) => {
               event.stopPropagation();
-              setHoverPointIndex((currentIndex) => (currentIndex === index ? null : currentIndex));
+              const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
+              setHoverPointIndex((currentIndex) => (currentIndex === pointIdentifier ? null : currentIndex));
             }}
           >
             <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
             <meshStandardMaterial
               color={
-                index === selectedPointIndex ? "#f28f3b" : index === hoverPointIndex ? "#e9a963" : "#3f7d9e"
+                normalizedPoints[index]?.pointIndex === selectedPointIndex
+                  ? "#f28f3b"
+                  : normalizedPoints[index]?.pointIndex === hoverPointIndex
+                    ? "#e9a963"
+                    : "#3f7d9e"
               }
               transparent
-              opacity={index === selectedPointIndex ? 0.95 : index === hoverPointIndex ? 0.78 : 0.45}
+              opacity={
+                normalizedPoints[index]?.pointIndex === selectedPointIndex
+                  ? 0.95
+                  : normalizedPoints[index]?.pointIndex === hoverPointIndex
+                    ? 0.78
+                    : 0.45
+              }
             />
           </mesh>
         ))}
@@ -687,7 +743,9 @@ export default function WellTrajectoryViewer({
         </div>
 
         <p className="viewer-toolbar-hint">
-          Left-drag rotate, scroll zoom, right-drag pan. Use Free Orbit for full tilt freedom.
+          {isVerticalProfileMode
+            ? "Vertical Profile shows the surface-to-end-MD interval with 20 ft TVD guides. Left-drag rotate, scroll zoom, right-drag pan."
+            : "Left-drag rotate, scroll zoom, right-drag pan. Use Free Orbit for full tilt freedom."}
         </p>
       </section>
     </div>
