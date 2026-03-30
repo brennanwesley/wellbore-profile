@@ -92,6 +92,8 @@ export default function SingleWellWorkspace() {
   const [lateralDraftStartMd, setLateralDraftStartMd] = useState("");
   const [lateralAppliedStartMd, setLateralAppliedStartMd] = useState(null);
   const [lateralInputError, setLateralInputError] = useState("");
+  const [verticalDraftStartMd, setVerticalDraftStartMd] = useState("0");
+  const [verticalAppliedStartMd, setVerticalAppliedStartMd] = useState(0);
   const [verticalDraftEndMd, setVerticalDraftEndMd] = useState("");
   const [verticalAppliedEndMd, setVerticalAppliedEndMd] = useState(null);
   const [verticalInputError, setVerticalInputError] = useState("");
@@ -156,6 +158,8 @@ export default function SingleWellWorkspace() {
     setLateralDraftStartMd("");
     setLateralAppliedStartMd(null);
     setLateralInputError("");
+    setVerticalDraftStartMd("0");
+    setVerticalAppliedStartMd(0);
     setVerticalDraftEndMd("");
     setVerticalAppliedEndMd(null);
     setVerticalInputError("");
@@ -268,6 +272,8 @@ export default function SingleWellWorkspace() {
 
   useEffect(() => {
     setViewerProfileMode("wellbore");
+    setVerticalDraftStartMd("0");
+    setVerticalAppliedStartMd(0);
     setVerticalDraftEndMd("");
     setVerticalAppliedEndMd(null);
     setVerticalInputError("");
@@ -321,12 +327,12 @@ export default function SingleWellWorkspace() {
   const selectedLateralOutsideRange = selectedPointIndex !== null && selectedVisibleLateralPoint === null;
 
   const visibleVerticalPoints = useMemo(() => {
-    if (verticalAppliedEndMd === null) {
+    if (verticalAppliedStartMd === null || verticalAppliedEndMd === null) {
       return [];
     }
 
-    return validLateralPoints.filter((point) => point.md <= verticalAppliedEndMd);
-  }, [validLateralPoints, verticalAppliedEndMd]);
+    return validLateralPoints.filter((point) => point.md >= verticalAppliedStartMd && point.md <= verticalAppliedEndMd);
+  }, [validLateralPoints, verticalAppliedEndMd, verticalAppliedStartMd]);
 
   const selectedVisibleVerticalPoint = useMemo(
     () => visibleVerticalPoints.find((point) => point.pointIndex === selectedPointIndex) ?? null,
@@ -344,7 +350,7 @@ export default function SingleWellWorkspace() {
   }, [visibleVerticalPoints]);
 
   const selectedVerticalOutsideRange =
-    selectedPointIndex !== null && verticalAppliedEndMd !== null && selectedVisibleVerticalPoint === null;
+    selectedPointIndex !== null && verticalAppliedStartMd !== null && verticalAppliedEndMd !== null && selectedVisibleVerticalPoint === null;
 
   const handleApplyLateralStartMd = useCallback(() => {
     if (lateralMdBounds.minMd === null || lateralMdBounds.maxMd === null) {
@@ -364,41 +370,59 @@ export default function SingleWellWorkspace() {
     setLateralInputError("");
   }, [lateralDraftStartMd, lateralMdBounds.maxMd, lateralMdBounds.minMd]);
 
-  const handleApplyVerticalEndMd = useCallback(() => {
+  const handleApplyVerticalMdWindow = useCallback(() => {
     if (lateralMdBounds.minMd === null || lateralMdBounds.maxMd === null) {
       return;
     }
 
+    const parsedStartMd = toFiniteNumber(verticalDraftStartMd);
     const parsedEndMd = toFiniteNumber(verticalDraftEndMd);
 
-    if (parsedEndMd === null) {
-      setVerticalInputError("Enter a numeric MD to end the vertical profile view.");
+    if (parsedStartMd === null || parsedEndMd === null) {
+      setVerticalInputError("Enter numeric Start and End MD values for the vertical profile view.");
       return;
     }
 
+    const clampedStartMd = clamp(parsedStartMd, lateralMdBounds.minMd, lateralMdBounds.maxMd);
     const clampedEndMd = clamp(parsedEndMd, lateralMdBounds.minMd, lateralMdBounds.maxMd);
-    setVerticalAppliedEndMd(clampedEndMd);
-    setVerticalDraftEndMd(String(clampedEndMd));
+    const nextStartMd = Math.min(clampedStartMd, clampedEndMd);
+    const nextEndMd = Math.max(clampedStartMd, clampedEndMd);
+
+    setVerticalAppliedStartMd(nextStartMd);
+    setVerticalAppliedEndMd(nextEndMd);
+    setVerticalDraftStartMd(String(nextStartMd));
+    setVerticalDraftEndMd(String(nextEndMd));
     setVerticalInputError("");
     setViewerProfileMode("vertical");
-  }, [lateralMdBounds.maxMd, lateralMdBounds.minMd, verticalDraftEndMd]);
+  }, [lateralMdBounds.maxMd, lateralMdBounds.minMd, verticalDraftEndMd, verticalDraftStartMd]);
 
   const activeViewerPoints = useMemo(
     () => (viewerProfileMode === "vertical" ? visibleVerticalPoints : validLateralPoints),
     [validLateralPoints, viewerProfileMode, visibleVerticalPoints],
   );
 
+  const verticalReferenceOrigin = useMemo(() => {
+    if (validLateralPoints.length === 0) {
+      return null;
+    }
+
+    return {
+      x: validLateralPoints[0].x,
+      y: validLateralPoints[0].y,
+    };
+  }, [validLateralPoints]);
+
   const viewerEmptyStateMessage = useMemo(() => {
     if (viewerProfileMode === "vertical") {
-      if (verticalAppliedEndMd === null) {
-        return "Enter End of Vertical MD (ft) and click Update View to open the vertical profile.";
+      if (verticalAppliedStartMd === null || verticalAppliedEndMd === null) {
+        return "Enter Start and End Vertical MD (ft) and click Update View to open the vertical profile.";
       }
 
       return "The selected vertical MD window does not contain enough survey points to render.";
     }
 
     return "No valid trajectory to render yet.";
-  }, [viewerProfileMode, verticalAppliedEndMd]);
+  }, [viewerProfileMode, verticalAppliedEndMd, verticalAppliedStartMd]);
 
   const hasEnoughPoints = validLateralPoints.length >= 2;
   const titleWellName = wellMetadata.wellName || "Upload Directional Survey";
@@ -548,6 +572,18 @@ export default function SingleWellWorkspace() {
 
           <div className="lateral-profile-data-content">
             <div className="lateral-profile-controls">
+              <label className="mapper-field lateral-profile-start-field" htmlFor="vertical-start-md-input">
+                <span className="lateral-profile-start-label">Start of Vertical MD (ft)</span>
+                <input
+                  id="vertical-start-md-input"
+                  type="number"
+                  className="mapper-input lateral-profile-start-input"
+                  value={verticalDraftStartMd}
+                  onChange={(event) => setVerticalDraftStartMd(event.target.value)}
+                  placeholder="Defaults to 0"
+                />
+              </label>
+
               <label className="mapper-field lateral-profile-start-field" htmlFor="vertical-end-md-input">
                 <span className="lateral-profile-start-label">End of Vertical MD (ft)</span>
                 <input
@@ -561,7 +597,7 @@ export default function SingleWellWorkspace() {
               </label>
 
               <div className="lateral-profile-control-actions">
-                <button type="button" className="secondary-btn" onClick={handleApplyVerticalEndMd}>
+                <button type="button" className="secondary-btn" onClick={handleApplyVerticalMdWindow}>
                   Update View
                 </button>
                 {selectedPointIndex !== null ? (
@@ -577,9 +613,9 @@ export default function SingleWellWorkspace() {
             <article className="lateral-profile-card">
               <p className="lateral-profile-card-title">Visible MD Window</p>
               <p className="lateral-profile-card-value">
-                {verticalAppliedEndMd === null
+                {verticalAppliedStartMd === null || verticalAppliedEndMd === null
                   ? "—"
-                  : `${formatNumber(validLateralPoints[0]?.md, 0)} - ${formatNumber(visibleVerticalPoints[visibleVerticalPoints.length - 1]?.md, 0)} ft`}
+                  : `${formatNumber(verticalAppliedStartMd, 0)} - ${formatNumber(verticalAppliedEndMd, 0)} ft`}
               </p>
             </article>
 
@@ -593,8 +629,8 @@ export default function SingleWellWorkspace() {
               <p className="lateral-profile-card-detail">
                 {selectedVisibleVerticalPoint
                   ? `MD ${formatNumber(selectedVisibleVerticalPoint.md, 1)} ft | TVD ${formatNumber(selectedVisibleVerticalPoint.tvd, 2)} ft`
-                  : verticalAppliedEndMd === null
-                    ? "Apply an end MD to inspect the vertical profile."
+                  : verticalAppliedStartMd === null || verticalAppliedEndMd === null
+                    ? "Apply a vertical MD window to inspect the vertical profile."
                     : selectedVerticalOutsideRange
                       ? "Selected point is outside the current vertical MD window."
                       : "Click a point in 3D to inspect it here."}
@@ -771,6 +807,7 @@ export default function SingleWellWorkspace() {
                 onSelectPoint={setSelectedPointIndex}
                 profileMode={viewerProfileMode}
                 depthGuideStep={viewerProfileMode === "vertical" ? 20 : 1000}
+                verticalReferenceOrigin={verticalReferenceOrigin}
                 emptyStateMessage={viewerEmptyStateMessage}
               />
             </div>

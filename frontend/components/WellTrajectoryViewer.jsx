@@ -116,11 +116,12 @@ export default function WellTrajectoryViewer({
   onSelectPoint,
   profileMode = "wellbore",
   depthGuideStep = COARSE_DEPTH_GUIDE_STEP,
+  verticalReferenceOrigin = null,
   emptyStateMessage = "No valid trajectory to render yet.",
 }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
-  const [showDepthGuides, setShowDepthGuides] = useState(true);
-  const [showDepthLabels, setShowDepthLabels] = useState(true);
+  const [showDepthGuides, setShowDepthGuides] = useState(false);
+  const [showDepthLabels, setShowDepthLabels] = useState(false);
   const [viewMode, setViewMode] = useState("isometric");
   const [spinEnabled, setSpinEnabled] = useState(false);
   const [spinAxis, setSpinAxis] = useState("z");
@@ -151,8 +152,8 @@ export default function WellTrajectoryViewer({
     setViewerResetKey((previous) => previous + 1);
     setSpinEnabled(false);
     setHoverPointIndex(null);
-    setShowDepthGuides(true);
-    setShowDepthLabels(true);
+    setShowDepthGuides(false);
+    setShowDepthLabels(false);
     setViewMode(isVerticalProfileMode ? "free" : "isometric");
     if (isVerticalProfileMode) {
       setSpinAxis("z");
@@ -394,11 +395,13 @@ export default function WellTrajectoryViewer({
   const depthTickHalfWidth = Math.max(span * 0.014, 2);
   const depthGuideLabelX = depthGuideXEnd + Math.max(depthGuidePadding * 0.12, 4);
   const depthGuideLabelY = center[1];
+  const referenceOriginX = toFiniteNumber(verticalReferenceOrigin?.x);
+  const referenceOriginY = toFiniteNumber(verticalReferenceOrigin?.y);
   const verticalReferencePoints =
-    isVerticalProfileMode && linePoints.length > 0
+    isVerticalProfileMode && referenceOriginX !== null && referenceOriginY !== null
       ? [
-          [linePoints[0][0], linePoints[0][1], -minTvd],
-          [linePoints[0][0], linePoints[0][1], -maxTvd],
+          [referenceOriginX, referenceOriginY, -minTvd],
+          [referenceOriginX, referenceOriginY, -maxTvd],
         ]
       : [];
 
