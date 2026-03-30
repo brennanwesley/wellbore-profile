@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import LateralProfileViewer from "@/components/LateralProfileViewer";
+import VerticalProfileViewer from "@/components/VerticalProfileViewer";
 import WellTrajectoryViewer from "@/components/WellTrajectoryViewer";
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
 
@@ -9,6 +10,7 @@ const DEFAULT_FORMATION_COLORS = ["#2f7d63", "#2c6e9f", "#a86d1e", "#8f3f3f", "#
 const DEFAULT_VIEWER_TOP_SPLIT = 58;
 const MIN_VIEWER_TOP_SPLIT = 40;
 const MAX_VIEWER_TOP_SPLIT = 82;
+const VERTICAL_EXAGGERATION_STEPS = [1, 2, 5, 10];
 
 function hasMetadataValue(value) {
   return value !== null && value !== undefined && String(value).trim() !== "";
@@ -97,6 +99,7 @@ export default function SingleWellWorkspace() {
   const [verticalDraftEndMd, setVerticalDraftEndMd] = useState("");
   const [verticalAppliedEndMd, setVerticalAppliedEndMd] = useState(null);
   const [verticalInputError, setVerticalInputError] = useState("");
+  const [verticalHorizontalExaggeration, setVerticalHorizontalExaggeration] = useState(1);
   const [viewerTopSplit, setViewerTopSplit] = useState(DEFAULT_VIEWER_TOP_SPLIT);
   const [isViewerSplitDragging, setIsViewerSplitDragging] = useState(false);
   const [wellMetadata, setWellMetadata] = useState(INITIAL_METADATA);
@@ -163,6 +166,7 @@ export default function SingleWellWorkspace() {
     setVerticalDraftEndMd("");
     setVerticalAppliedEndMd(null);
     setVerticalInputError("");
+    setVerticalHorizontalExaggeration(1);
     setViewerTopSplit(DEFAULT_VIEWER_TOP_SPLIT);
     setWellMetadata(INITIAL_METADATA);
     setFormations([]);
@@ -277,6 +281,7 @@ export default function SingleWellWorkspace() {
     setVerticalDraftEndMd("");
     setVerticalAppliedEndMd(null);
     setVerticalInputError("");
+    setVerticalHorizontalExaggeration(1);
   }, [validLateralPoints]);
 
   const visibleLateralPoints = useMemo(() => {
@@ -608,6 +613,19 @@ export default function SingleWellWorkspace() {
               </div>
 
               {verticalInputError ? <p className="warning lateral-profile-message">{verticalInputError}</p> : null}
+
+              <div className="lateral-profile-scale-group" aria-label="Vertical profile horizontal exaggeration">
+                {VERTICAL_EXAGGERATION_STEPS.map((step) => (
+                  <button
+                    key={`vertical-exaggeration-${step}`}
+                    type="button"
+                    className={`viewer-tool-btn ${verticalHorizontalExaggeration === step ? "is-active" : ""}`}
+                    onClick={() => setVerticalHorizontalExaggeration(step)}
+                  >
+                    {step}x Horizontal
+                  </button>
+                ))}
+              </div>
             </div>
 
             <article className="lateral-profile-card">
@@ -622,6 +640,11 @@ export default function SingleWellWorkspace() {
             <article className="lateral-profile-card">
               <p className="lateral-profile-card-title">Visible TVD Delta</p>
               <p className="lateral-profile-card-value">{formatNumber(visibleVerticalTvdDelta, 2)} ft</p>
+            </article>
+
+            <article className="lateral-profile-card">
+              <p className="lateral-profile-card-title">Horizontal Exaggeration</p>
+              <p className="lateral-profile-card-value">{formatNumber(verticalHorizontalExaggeration, 0)}x</p>
             </article>
 
             <article className="lateral-profile-card">
@@ -808,6 +831,7 @@ export default function SingleWellWorkspace() {
                 profileMode={viewerProfileMode}
                 depthGuideStep={viewerProfileMode === "vertical" ? 20 : 1000}
                 verticalReferenceOrigin={verticalReferenceOrigin}
+                horizontalExaggeration={verticalHorizontalExaggeration}
                 emptyStateMessage={viewerEmptyStateMessage}
               />
             </div>
@@ -839,19 +863,31 @@ export default function SingleWellWorkspace() {
                 setViewerTopSplit(MAX_VIEWER_TOP_SPLIT);
               }
             }}
-            aria-label="Resize the 3D viewer and lateral detail panes"
+            aria-label="Resize the 3D viewer and 2D detail panes"
             title="Drag to resize panes. Double-click to reset the default split."
           >
             <span className="viewer-splitter-handle" aria-hidden="true" />
           </button>
 
           <div className="viewer-pane viewer-pane-2d">
-            <LateralProfileViewer
-              points={points}
-              appliedStartMd={lateralAppliedStartMd}
-              selectedPointIndex={selectedPointIndex}
-              onSelectPoint={setSelectedPointIndex}
-            />
+            {viewerProfileMode === "vertical" ? (
+              <VerticalProfileViewer
+                points={visibleVerticalPoints}
+                verticalReferenceOrigin={verticalReferenceOrigin}
+                appliedStartMd={verticalAppliedStartMd}
+                appliedEndMd={verticalAppliedEndMd}
+                horizontalExaggeration={verticalHorizontalExaggeration}
+                selectedPointIndex={selectedPointIndex}
+                onSelectPoint={setSelectedPointIndex}
+              />
+            ) : (
+              <LateralProfileViewer
+                points={points}
+                appliedStartMd={lateralAppliedStartMd}
+                selectedPointIndex={selectedPointIndex}
+                onSelectPoint={setSelectedPointIndex}
+              />
+            )}
           </div>
         </div>
       </section>

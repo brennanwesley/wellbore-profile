@@ -1552,6 +1552,55 @@ body {
   box-shadow: 0 8px 20px rgba(23, 34, 43, 0.2);
 }
 
+.vertical-context-card {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  width: min(240px, calc(100% - 1.4rem));
+  background: rgba(255, 250, 242, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.58rem 0.62rem;
+  box-shadow: 0 8px 22px rgba(24, 35, 42, 0.18);
+}
+
+.vertical-context-title {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #2a4556;
+  font-weight: 700;
+}
+
+.vertical-context-grid {
+  margin: 0.42rem 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.42rem;
+}
+
+.vertical-context-grid div {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid #d8ccb7;
+  border-radius: 10px;
+  padding: 0.38rem 0.42rem;
+}
+
+.vertical-context-grid dt {
+  margin: 0;
+  font-size: 0.66rem;
+  color: #5f727d;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vertical-context-grid dd {
+  margin: 0.14rem 0 0;
+  font-size: 0.86rem;
+  color: #213847;
+  font-weight: 800;
+}
+
 .viewer-toolbar {
   position: absolute;
   left: 50%;
@@ -1931,9 +1980,36 @@ body {
   stroke-linejoin: round;
 }
 
+.vertical-profile-line {
+  fill: none;
+  stroke: #1d6d8d;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vertical-profile-reference-line {
+  stroke: rgba(155, 92, 88, 0.78);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+}
+
+.vertical-profile-reference-label {
+  fill: #9b5c58;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .lateral-profile-point {
   fill: rgba(19, 84, 117, 0.26);
   stroke: rgba(15, 65, 94, 0.42);
+  stroke-width: 1;
+  cursor: pointer;
+}
+
+.vertical-profile-point {
+  fill: rgba(29, 109, 141, 0.24);
+  stroke: rgba(20, 77, 100, 0.44);
   stroke-width: 1;
   cursor: pointer;
 }
@@ -1944,7 +2020,18 @@ body {
   stroke-width: 2;
 }
 
+.vertical-profile-point.is-selected {
+  fill: #f28f3b;
+  stroke: #a8551c;
+  stroke-width: 2;
+}
+
 .lateral-profile-point.is-shallowest {
+  fill: #4c9950;
+  stroke: #1f5f22;
+}
+
+.vertical-profile-point.is-shallowest {
   fill: #4c9950;
   stroke: #1f5f22;
 }
@@ -1952,6 +2039,28 @@ body {
 .lateral-profile-point.is-deepest {
   fill: #c65042;
   stroke: #7b241c;
+}
+
+.vertical-profile-point.is-deepest {
+  fill: #c65042;
+  stroke: #7b241c;
+}
+
+.vertical-profile-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.vertical-profile-summary-pill {
+  border: 1px solid #d8ccb7;
+  border-radius: 999px;
+  background: rgba(255, 250, 242, 0.92);
+  color: #274152;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.28rem 0.56rem;
 }
 
 .lateral-profile-empty {

@@ -117,6 +117,7 @@ export default function WellTrajectoryViewer({
   profileMode = "wellbore",
   depthGuideStep = COARSE_DEPTH_GUIDE_STEP,
   verticalReferenceOrigin = null,
+  horizontalExaggeration = 1,
   emptyStateMessage = "No valid trajectory to render yet.",
 }) {
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
@@ -141,6 +142,7 @@ export default function WellTrajectoryViewer({
   );
   const hasEnoughPoints = normalizedPoints.length >= 2;
   const isVerticalProfileMode = profileMode === "vertical";
+  const effectiveHorizontalExaggeration = isVerticalProfileMode ? Math.max(horizontalExaggeration, 1) : 1;
 
   useEffect(() => {
     if (hoverPointIndex !== null && !normalizedPoints.some((point) => point.pointIndex === hoverPointIndex)) {
@@ -176,12 +178,64 @@ export default function WellTrajectoryViewer({
       };
     }
 
-    return getBounds(points);
-  }, [hasEnoughPoints, points]);
+    const originX = toFiniteNumber(verticalReferenceOrigin?.x);
+    const originY = toFiniteNumber(verticalReferenceOrigin?.y);
+    const renderPoints = normalizedPoints.map((point) => {
+      const pointX = toFiniteNumber(point.x);
+      const pointY = toFiniteNumber(point.y);
+
+      if (
+        !isVerticalProfileMode ||
+        effectiveHorizontalExaggeration === 1 ||
+        originX === null ||
+        originY === null ||
+        pointX === null ||
+        pointY === null
+      ) {
+        return point;
+      }
+
+      return {
+        ...point,
+        x: originX + (pointX - originX) * effectiveHorizontalExaggeration,
+        y: originY + (pointY - originY) * effectiveHorizontalExaggeration,
+      };
+    });
+
+    return getBounds(renderPoints);
+  }, [effectiveHorizontalExaggeration, hasEnoughPoints, isVerticalProfileMode, normalizedPoints, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y]);
 
   const linePoints = useMemo(
-    () => (hasEnoughPoints ? normalizedPoints.map((point) => [point.x, point.y, -point.z]) : []),
-    [hasEnoughPoints, normalizedPoints],
+    () => {
+      if (!hasEnoughPoints) {
+        return [];
+      }
+
+      const originX = toFiniteNumber(verticalReferenceOrigin?.x);
+      const originY = toFiniteNumber(verticalReferenceOrigin?.y);
+
+      return normalizedPoints.map((point) => {
+        const pointX = toFiniteNumber(point.x) ?? 0;
+        const pointY = toFiniteNumber(point.y) ?? 0;
+        const pointZ = toFiniteNumber(point.z) ?? 0;
+
+        if (
+          !isVerticalProfileMode ||
+          effectiveHorizontalExaggeration === 1 ||
+          originX === null ||
+          originY === null
+        ) {
+          return [pointX, pointY, -pointZ];
+        }
+
+        return [
+          originX + (pointX - originX) * effectiveHorizontalExaggeration,
+          originY + (pointY - originY) * effectiveHorizontalExaggeration,
+          -pointZ,
+        ];
+      });
+    },
+    [effectiveHorizontalExaggeration, hasEnoughPoints, isVerticalProfileMode, normalizedPoints, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y],
   );
 
   const shallowestTvd = useMemo(() => {
@@ -364,6 +418,61 @@ export default function WellTrajectoryViewer({
           return pointIndex >= 0 && pointIndex < linePoints.length ? linePoints[pointIndex] : null;
         })()
       : null;
+  const activePointOffset = useMemo(() => {
+    if (!isVerticalProfileMode || !activePoint) {
+      return null;
+    }
+
+    const pointX = toFiniteNumber(activePoint.x);
+    const pointY = toFiniteNumber(activePoint.y);
+    const originX = toFiniteNumber(verticalReferenceOrigin?.x);
+    const originY = toFiniteNumber(verticalReferenceOrigin?.y);
+
+    if (pointX === null || pointY === null || originX === null || originY === null) {
+      return null;
+    }
+
+    return Math.hypot(pointX - originX, pointY - originY);
+  }, [activePoint, isVerticalProfileMode, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y]);
+  const maxOffsetPoint = useMemo(() => {
+    if (!isVerticalProfileMode) {
+      return null;
+    }
+
+    const originX = toFiniteNumber(verticalReferenceOrigin?.x);
+    const originY = toFiniteNumber(verticalReferenceOrigin?.y);
+
+    if (originX === null || originY === null) {
+      return null;
+    }
+
+    return normalizedPoints.reduce((bestPoint, point) => {
+      const pointX = toFiniteNumber(point.x);
+      const pointY = toFiniteNumber(point.y);
+
+      if (pointX === null || pointY === null) {
+        return bestPoint;
+      }
+
+      const offset = Math.hypot(pointX - originX, pointY - originY);
+
+      if (!bestPoint || offset > bestPoint.offset) {
+        return {
+          point,
+          offset,
+        };
+      }
+
+      return bestPoint;
+    }, null);
+  }, [isVerticalProfileMode, normalizedPoints, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y]);
+  const maxOffsetPosition =
+    maxOffsetPoint !== null
+      ? (() => {
+          const pointIndex = normalizedPoints.findIndex((point) => point.pointIndex === maxOffsetPoint.point.pointIndex);
+          return pointIndex >= 0 && pointIndex < linePoints.length ? linePoints[pointIndex] : null;
+        })()
+      : null;
 
   const resetViewerCamera = useCallback(() => {
     setViewerResetKey((previous) => previous + 1);
@@ -402,6 +511,20 @@ export default function WellTrajectoryViewer({
       ? [
           [referenceOriginX, referenceOriginY, -minTvd],
           [referenceOriginX, referenceOriginY, -maxTvd],
+        ]
+      : [];
+  const activeReferenceConnectorPoints =
+    isVerticalProfileMode && activePoint && activePosition && referenceOriginX !== null && referenceOriginY !== null
+      ? [
+          [referenceOriginX, referenceOriginY, activePosition[2]],
+          activePosition,
+        ]
+      : [];
+  const maxOffsetConnectorPoints =
+    isVerticalProfileMode && maxOffsetPoint && maxOffsetPosition && referenceOriginX !== null && referenceOriginY !== null
+      ? [
+          [referenceOriginX, referenceOriginY, -(maxOffsetPoint.point.tvd ?? maxOffsetPoint.point.z)],
+          maxOffsetPosition,
         ]
       : [];
 
@@ -497,6 +620,14 @@ export default function WellTrajectoryViewer({
               <div className="axis-tag axis-tag-reference">Vertical Reference</div>
             </Html>
           </>
+        ) : null}
+
+        {maxOffsetConnectorPoints.length === 2 ? (
+          <Line points={maxOffsetConnectorPoints} color="#c08a33" lineWidth={1.6} />
+        ) : null}
+
+        {activeReferenceConnectorPoints.length === 2 ? (
+          <Line points={activeReferenceConnectorPoints} color="#f28f3b" lineWidth={2.3} />
         ) : null}
 
         <Line points={linePoints} color={isVerticalProfileMode ? "#1d6d8d" : "#0f7b8a"} lineWidth={3} />
@@ -657,6 +788,30 @@ export default function WellTrajectoryViewer({
         )}
       </section>
 
+      {isVerticalProfileMode ? (
+        <section className="vertical-context-card" aria-label="Vertical context summary">
+          <p className="vertical-context-title">Vertical Context</p>
+          <dl className="vertical-context-grid">
+            <div>
+              <dt>Window TVD</dt>
+              <dd>{formatNumber(maxTvd - minTvd, 1)} ft</dd>
+            </div>
+            <div>
+              <dt>Max Offset</dt>
+              <dd>{formatNumber(maxOffsetPoint?.offset, 1)} ft</dd>
+            </div>
+            <div>
+              <dt>Max Offset MD</dt>
+              <dd>{formatNumber(maxOffsetPoint?.point?.md, 1)} ft</dd>
+            </div>
+            <div>
+              <dt>Active Offset</dt>
+              <dd>{formatNumber(activePointOffset, 1)} ft</dd>
+            </div>
+          </dl>
+        </section>
+      ) : null}
+
       {formationIntervals.length > 0 ? (
         <section className="formation-legend" aria-label="Visible formations">
           <p className="formation-legend-title">Visible Formations</p>
@@ -747,7 +902,7 @@ export default function WellTrajectoryViewer({
 
         <p className="viewer-toolbar-hint">
           {isVerticalProfileMode
-            ? "Vertical Profile shows the surface-to-end-MD interval with 20 ft TVD guides. Left-drag rotate, scroll zoom, right-drag pan."
+            ? "Vertical Profile shows the selected MD window against the true vertical reference. Left-drag rotate, scroll zoom, right-drag pan."
             : "Left-drag rotate, scroll zoom, right-drag pan. Use Free Orbit for full tilt freedom."}
         </p>
       </section>
