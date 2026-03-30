@@ -695,6 +695,7 @@ body {
   gap: 1rem;
   padding: 1rem;
   overflow: hidden;
+  min-height: 0;
 }
 
 .panel {
@@ -702,6 +703,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: 0 12px 30px rgba(39, 44, 51, 0.08);
+  min-height: 0;
 }
 
 .control-panel {
@@ -710,6 +712,7 @@ body {
   gap: 0.85rem;
   padding: 1.1rem;
   min-height: 0;
+  height: calc(100vh - 2rem);
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1824,7 +1827,7 @@ body {
   border: 1px solid #dbcdb4;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.72);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .lateral-profile-data-summary {
@@ -1865,7 +1868,7 @@ body {
   flex-direction: column;
   gap: 0.45rem;
   overflow: visible;
-  padding: 0.58rem;
+  padding: 0.58rem 0.58rem 0.82rem;
 }
 
 .lateral-profile-card {
