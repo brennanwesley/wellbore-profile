@@ -6,7 +6,8 @@ const DEFAULT_PROFILE_WIDTH = 980;
 const DEFAULT_PROFILE_HEIGHT = 360;
 const MIN_PROFILE_WIDTH = 420;
 const MIN_PROFILE_HEIGHT = 240;
-const GRID_STEPS = [5, 10, 20];
+const HORIZONTAL_GRID_STEPS = [5, 10, 20];
+const TVD_GRID_STEPS = [1000, 500, 100];
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -35,27 +36,6 @@ function clamp(value, minValue, maxValue) {
   return Math.min(Math.max(value, minValue), maxValue);
 }
 
-function getNiceTickStep(minValue, maxValue, targetTickCount = 6) {
-  const range = Math.max(maxValue - minValue, 1);
-  const rawStep = range / Math.max(targetTickCount, 1);
-  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
-  const normalized = rawStep / magnitude;
-
-  if (normalized <= 1) {
-    return 1 * magnitude;
-  }
-
-  if (normalized <= 2) {
-    return 2 * magnitude;
-  }
-
-  if (normalized <= 5) {
-    return 5 * magnitude;
-  }
-
-  return 10 * magnitude;
-}
-
 function buildPath(points, getX, getY) {
   if (!Array.isArray(points) || points.length === 0) {
     return "";
@@ -76,6 +56,7 @@ export default function VerticalProfileViewer({
   horizontalExaggeration = 1,
 }) {
   const [horizontalGridStep, setHorizontalGridStep] = useState(5);
+  const [verticalGridStep, setVerticalGridStep] = useState(1000);
   const [chartSize, setChartSize] = useState({
     width: DEFAULT_PROFILE_WIDTH,
     height: DEFAULT_PROFILE_HEIGHT,
@@ -155,7 +136,7 @@ export default function VerticalProfileViewer({
   }, [horizontalExaggeration, points, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y]);
 
   const chartPadding = useMemo(() => {
-    const left = clamp(Math.round(chartSize.width * 0.1), 88, 118);
+    const left = clamp(Math.round(chartSize.width * 0.12), 102, 132);
     const right = clamp(Math.round(chartSize.width * 0.05), 62, 92);
     const top = clamp(Math.round(chartSize.height * 0.09), 24, 34);
     const bottom = clamp(Math.round(chartSize.height * 0.23), 72, 92);
@@ -206,8 +187,6 @@ export default function VerticalProfileViewer({
     const plotHeight = Math.max(chartSize.height - chartPadding.top - chartPadding.bottom, 120);
     const offsetRange = Math.max(safeMaxOffset - safeMinOffset, horizontalGridStep);
     const tvdRange = Math.max(maxTvd - minTvd, 1);
-    const targetTvdTickCount = clamp(Math.round(plotHeight / 72), 4, 9);
-    const tvdTickStep = getNiceTickStep(minTvd, maxTvd, targetTvdTickCount);
     const offsetTicks = [];
     const tvdTicks = [];
 
@@ -216,11 +195,11 @@ export default function VerticalProfileViewer({
     }
 
     for (
-      let tick = Math.floor(minTvd / tvdTickStep) * tvdTickStep;
-      tick <= maxTvd + tvdTickStep * 0.5;
-      tick += tvdTickStep
+      let tick = Math.floor(minTvd / verticalGridStep) * verticalGridStep;
+      tick <= maxTvd + verticalGridStep * 0.5;
+      tick += verticalGridStep
     ) {
-      if (tick >= minTvd - tvdTickStep * 0.25) {
+      if (tick >= minTvd - verticalGridStep * 0.25) {
         tvdTicks.push(Number(tick.toFixed(6)));
       }
     }
@@ -241,7 +220,7 @@ export default function VerticalProfileViewer({
       zeroOffsetX,
       path: buildPath(validPoints, getX, getY),
     };
-  }, [chartPadding.bottom, chartPadding.left, chartPadding.right, chartPadding.top, chartSize.height, chartSize.width, horizontalGridStep, validPoints]);
+  }, [chartPadding.bottom, chartPadding.left, chartPadding.right, chartPadding.top, chartSize.height, chartSize.width, horizontalGridStep, validPoints, verticalGridStep]);
 
   const canRenderChart = chartMetrics !== null && validPoints.length >= 2;
 
@@ -297,15 +276,26 @@ export default function VerticalProfileViewer({
           </p>
         </div>
 
-        <div className="lateral-profile-scale-group" aria-label="Horizontal offset grid scale">
-          {GRID_STEPS.map((step) => (
+        <div className="lateral-profile-scale-group" aria-label="Vertical profile grid controls">
+          {HORIZONTAL_GRID_STEPS.map((step) => (
             <button
               key={`vertical-profile-grid-${step}`}
               type="button"
               className={`viewer-tool-btn ${horizontalGridStep === step ? "is-active" : ""}`}
               onClick={() => setHorizontalGridStep(step)}
             >
-              {step} ft Grid
+              X: {step} ft
+            </button>
+          ))}
+
+          {TVD_GRID_STEPS.map((step) => (
+            <button
+              key={`vertical-profile-tvd-grid-${step}`}
+              type="button"
+              className={`viewer-tool-btn ${verticalGridStep === step ? "is-active" : ""}`}
+              onClick={() => setVerticalGridStep(step)}
+            >
+              Y: {step} ft
             </button>
           ))}
         </div>
@@ -401,8 +391,8 @@ export default function VerticalProfileViewer({
                 Section Offset from True Vertical (ft)
               </text>
               <text
-                x={22}
-                y={chartPadding.top - 6}
+                x={34}
+                y={chartPadding.top - 14}
                 textAnchor="start"
                 className="lateral-profile-axis-label lateral-profile-axis-label-y"
               >
