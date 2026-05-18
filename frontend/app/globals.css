@@ -1718,6 +1718,37 @@ body {
   color: var(--muted);
 }
 
+.viewer-unavailable {
+  max-width: 38rem;
+  padding: 1.2rem 1.3rem;
+  border: 1px solid rgba(215, 205, 185, 0.92);
+  border-radius: 16px;
+  background: rgba(255, 250, 242, 0.94);
+  box-shadow: 0 14px 34px rgba(33, 48, 61, 0.08);
+}
+
+.viewer-unavailable-eyebrow {
+  margin: 0;
+  color: #8b4e31;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.viewer-unavailable-title {
+  margin: 0.45rem 0 0;
+  color: #173243;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.viewer-unavailable-copy {
+  margin: 0.6rem 0 0;
+  color: #506775;
+  line-height: 1.6;
+}
+
 .lateral-profile-panel {
   display: flex;
   flex-direction: column;

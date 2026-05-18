@@ -2,6 +2,7 @@
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Html, Line, OrbitControls } from "@react-three/drei";
+import WebGlViewerGuard from "@/components/WebGlViewerGuard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Vector3 } from "three";
 
@@ -230,138 +231,145 @@ export default function MultiWellTrajectoryViewer({ wells }) {
 
   return (
     <div className="viewer-canvas">
-      <Canvas
-        key={`dsu-viewer-${viewerResetKey}`}
-        onPointerMissed={() => {
-          setSelectedTarget(null);
-          setHoverTarget(null);
-        }}
-        camera={{ position: initialCameraPosition, up: [0, 0, 1], fov: 50, near: 0.1, far: 100000 }}
+      <WebGlViewerGuard
+        resetKey={viewerResetKey}
+        className="viewer-empty dsu-viewer-empty"
+        fallbackTitle="3D DSU viewer unavailable on this device"
+        fallbackDescription="This browser session could not create a WebGL context, so the DSU 3D viewer could not start."
       >
-        <color attach="background" args={["#fff8ea"]} />
-        <ambientLight intensity={0.65} />
-        <directionalLight position={[span, span, span]} intensity={1.1} />
+        <Canvas
+          key={`dsu-viewer-${viewerResetKey}`}
+          onPointerMissed={() => {
+            setSelectedTarget(null);
+            setHoverTarget(null);
+          }}
+          camera={{ position: initialCameraPosition, up: [0, 0, 1], fov: 50, near: 0.1, far: 100000 }}
+        >
+          <color attach="background" args={["#fff8ea"]} />
+          <ambientLight intensity={0.65} />
+          <directionalLight position={[span, span, span]} intensity={1.1} />
 
-        <group position={axisOrigin}>
-          <axesHelper args={[axisLength]} />
-        </group>
-        <gridHelper
-          args={[span * 2, 20, "#688597", "#b6c3cc"]}
-          position={[center[0], center[1], surfaceGridZ]}
-          rotation={[Math.PI / 2, 0, 0]}
-        />
+          <group position={axisOrigin}>
+            <axesHelper args={[axisLength]} />
+          </group>
+          <gridHelper
+            args={[span * 2, 20, "#688597", "#b6c3cc"]}
+            position={[center[0], center[1], surfaceGridZ]}
+            rotation={[Math.PI / 2, 0, 0]}
+          />
 
-        {tvdTicks.map((tvdValue) => {
-          const guideZ = -tvdValue;
-          return (
-            <group key={`depth-guide-${tvdValue}`}>
-              {showDepthGuides ? (
-                <>
-                  <Line points={[[depthGuideXStart, center[1], guideZ], [depthGuideXEnd, center[1], guideZ]]} color="#c5d1d9" lineWidth={1} />
-                  <Line points={[[center[0], depthGuideYStart, guideZ], [center[0], depthGuideYEnd, guideZ]]} color="#d1dce2" lineWidth={1} />
-                  <Line
-                    points={[[depthAxisX - depthTickHalfWidth, depthAxisY, guideZ], [depthAxisX + depthTickHalfWidth, depthAxisY, guideZ]]}
-                    color="#4f6b7b"
-                    lineWidth={1.6}
-                  />
-                </>
-              ) : null}
-              {showDepthLabels ? (
-                <Html position={[depthGuideLabelX, depthGuideLabelY, guideZ]} center>
-                  <div className="depth-gridline-label">TVD {formatNumber(Math.abs(tvdValue), 0)} ft</div>
-                </Html>
-              ) : null}
+          {tvdTicks.map((tvdValue) => {
+            const guideZ = -tvdValue;
+            return (
+              <group key={`depth-guide-${tvdValue}`}>
+                {showDepthGuides ? (
+                  <>
+                    <Line points={[[depthGuideXStart, center[1], guideZ], [depthGuideXEnd, center[1], guideZ]]} color="#c5d1d9" lineWidth={1} />
+                    <Line points={[[center[0], depthGuideYStart, guideZ], [center[0], depthGuideYEnd, guideZ]]} color="#d1dce2" lineWidth={1} />
+                    <Line
+                      points={[[depthAxisX - depthTickHalfWidth, depthAxisY, guideZ], [depthAxisX + depthTickHalfWidth, depthAxisY, guideZ]]}
+                      color="#4f6b7b"
+                      lineWidth={1.6}
+                    />
+                  </>
+                ) : null}
+                {showDepthLabels ? (
+                  <Html position={[depthGuideLabelX, depthGuideLabelY, guideZ]} center>
+                    <div className="depth-gridline-label">TVD {formatNumber(Math.abs(tvdValue), 0)} ft</div>
+                  </Html>
+                ) : null}
+              </group>
+            );
+          })}
+
+          <Line points={[[depthAxisX, depthAxisY, -shallowestTvd], [depthAxisX, depthAxisY, -deepestTvd]]} color="#3f6478" lineWidth={1.9} />
+
+          <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
+            <div className="depth-axis-title">TVD</div>
+          </Html>
+
+          {renderWells.map((well) => (
+            <group key={`well-${well.id}`}>
+              <Line points={well.linePoints} color={well.color} lineWidth={3} />
+
+              <mesh position={[well.surfaceOffsetEastingFt, well.surfaceOffsetNorthingFt, surfaceGridZ]}>
+                <sphereGeometry args={[surfaceMarkerRadius, 20, 20]} />
+                <meshStandardMaterial color={well.color} />
+              </mesh>
+
+              <Html position={[well.surfaceOffsetEastingFt, well.surfaceOffsetNorthingFt, surfaceGridZ]} center distanceFactor={24}>
+                <div className="axis-tag dsu-well-label" style={{ borderColor: well.color, color: well.color }}>
+                  {well.wellName}
+                </div>
+              </Html>
+
+              {well.pointEntries.map((entry) => {
+                const currentTarget = { wellId: well.id, pointIndex: entry.pointIndex };
+                const isSelected = isSameTarget(selectedTarget, currentTarget);
+                const isHovered = isSameTarget(hoverTarget, currentTarget);
+
+                return (
+                  <mesh
+                    key={`point-${well.id}-${entry.pointIndex}`}
+                    position={entry.position}
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      setSelectedTarget((previous) => (isSameTarget(previous, currentTarget) ? null : currentTarget));
+                    }}
+                    onPointerOver={(event) => {
+                      event.stopPropagation();
+                      setHoverTarget(currentTarget);
+                    }}
+                    onPointerOut={(event) => {
+                      event.stopPropagation();
+                      setHoverTarget((previous) => (isSameTarget(previous, currentTarget) ? null : previous));
+                    }}
+                  >
+                    <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
+                    <meshStandardMaterial
+                      color={isSelected ? "#f28f3b" : isHovered ? "#e9a963" : well.color}
+                      transparent
+                      opacity={isSelected ? 0.95 : isHovered ? 0.82 : 0.52}
+                    />
+                  </mesh>
+                );
+              })}
             </group>
-          );
-        })}
+          ))}
 
-        <Line points={[[depthAxisX, depthAxisY, -shallowestTvd], [depthAxisX, depthAxisY, -deepestTvd]]} color="#3f6478" lineWidth={1.9} />
-
-        <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
-          <div className="depth-axis-title">TVD</div>
-        </Html>
-
-        {renderWells.map((well) => (
-          <group key={`well-${well.id}`}>
-            <Line points={well.linePoints} color={well.color} lineWidth={3} />
-
-            <mesh position={[well.surfaceOffsetEastingFt, well.surfaceOffsetNorthingFt, surfaceGridZ]}>
-              <sphereGeometry args={[surfaceMarkerRadius, 20, 20]} />
-              <meshStandardMaterial color={well.color} />
-            </mesh>
-
-            <Html position={[well.surfaceOffsetEastingFt, well.surfaceOffsetNorthingFt, surfaceGridZ]} center distanceFactor={24}>
-              <div className="axis-tag dsu-well-label" style={{ borderColor: well.color, color: well.color }}>
-                {well.wellName}
+          {activeWell && activeEntry ? (
+            <Html position={activeEntry.position} center distanceFactor={14}>
+              <div className="depth-pill">
+                {selectedTarget ? "Selected" : "Hover"} | {activeWell.wellName} | MD: {formatNumber(activeEntry.point.md, 1)} ft
               </div>
             </Html>
+          ) : null}
 
-            {well.pointEntries.map((entry) => {
-              const currentTarget = { wellId: well.id, pointIndex: entry.pointIndex };
-              const isSelected = isSameTarget(selectedTarget, currentTarget);
-              const isHovered = isSameTarget(hoverTarget, currentTarget);
-
-              return (
-                <mesh
-                  key={`point-${well.id}-${entry.pointIndex}`}
-                  position={entry.position}
-                  onPointerDown={(event) => {
-                    event.stopPropagation();
-                    setSelectedTarget((previous) => (isSameTarget(previous, currentTarget) ? null : currentTarget));
-                  }}
-                  onPointerOver={(event) => {
-                    event.stopPropagation();
-                    setHoverTarget(currentTarget);
-                  }}
-                  onPointerOut={(event) => {
-                    event.stopPropagation();
-                    setHoverTarget((previous) => (isSameTarget(previous, currentTarget) ? null : previous));
-                  }}
-                >
-                  <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
-                  <meshStandardMaterial
-                    color={isSelected ? "#f28f3b" : isHovered ? "#e9a963" : well.color}
-                    transparent
-                    opacity={isSelected ? 0.95 : isHovered ? 0.82 : 0.52}
-                  />
-                </mesh>
-              );
-            })}
-          </group>
-        ))}
-
-        {activeWell && activeEntry ? (
-          <Html position={activeEntry.position} center distanceFactor={14}>
-            <div className="depth-pill">
-              {selectedTarget ? "Selected" : "Hover"} | {activeWell.wellName} | MD: {formatNumber(activeEntry.point.md, 1)} ft
-            </div>
+          <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
+            <div className="axis-tag axis-tag-east">X / E</div>
           </Html>
-        ) : null}
+          <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
+            <div className="axis-tag axis-tag-north">Y / N</div>
+          </Html>
+          <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
+            <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
+          </Html>
 
-        <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
-          <div className="axis-tag axis-tag-east">X / E</div>
-        </Html>
-        <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
-          <div className="axis-tag axis-tag-north">Y / N</div>
-        </Html>
-        <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
-          <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
-        </Html>
+          <OrbitControls
+            ref={orbitControlsRef}
+            makeDefault
+            target={center}
+            enableDamping
+            dampingFactor={0.08}
+            minPolarAngle={usingIsometricMode ? ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MIN}
+            maxPolarAngle={usingIsometricMode ? ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MAX}
+            minAzimuthAngle={-Infinity}
+            maxAzimuthAngle={Infinity}
+          />
 
-        <OrbitControls
-          ref={orbitControlsRef}
-          makeDefault
-          target={center}
-          enableDamping
-          dampingFactor={0.08}
-          minPolarAngle={usingIsometricMode ? ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MIN}
-          maxPolarAngle={usingIsometricMode ? ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MAX}
-          minAzimuthAngle={-Infinity}
-          maxAzimuthAngle={Infinity}
-        />
-
-        <CameraSpinner controlsRef={orbitControlsRef} enabled={spinEnabled} axis={spinAxis} speed={spinSpeed} />
-      </Canvas>
+          <CameraSpinner controlsRef={orbitControlsRef} enabled={spinEnabled} axis={spinAxis} speed={spinSpeed} />
+        </Canvas>
+      </WebGlViewerGuard>
 
       <section className="inspector-card" aria-live="polite">
         <div className="inspector-header">

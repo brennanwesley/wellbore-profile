@@ -2,6 +2,7 @@
 
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Html, Line, OrbitControls } from "@react-three/drei";
+import WebGlViewerGuard from "@/components/WebGlViewerGuard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Vector3 } from "three";
 
@@ -530,217 +531,220 @@ export default function WellTrajectoryViewer({
 
   return (
     <div className="viewer-canvas">
-      <Canvas
-        key={`viewer-${viewerResetKey}`}
-        onPointerMissed={() => {
-          onSelectPoint?.(null);
-          setHoverPointIndex(null);
-        }}
-        camera={{
-          position: initialCameraPosition,
-          up: [0, 0, 1],
-          fov: 50,
-          near: 0.1,
-          far: 100000,
-        }}
+      <WebGlViewerGuard
+        resetKey={viewerResetKey}
+        fallbackTitle="3D wellbore viewer unavailable on this device"
+        fallbackDescription="This browser session could not create a WebGL context, so the interactive wellbore viewer could not start."
       >
-        <color attach="background" args={["#fff8ea"]} />
-        <ambientLight intensity={0.65} />
-        <directionalLight position={[span, span, span]} intensity={1.1} />
+        <Canvas
+          key={`viewer-${viewerResetKey}`}
+          onPointerMissed={() => {
+            onSelectPoint?.(null);
+            setHoverPointIndex(null);
+          }}
+          camera={{
+            position: initialCameraPosition,
+            up: [0, 0, 1],
+            fov: 50,
+            near: 0.1,
+            far: 100000,
+          }}
+        >
+          <color attach="background" args={["#fff8ea"]} />
+          <ambientLight intensity={0.65} />
+          <directionalLight position={[span, span, span]} intensity={1.1} />
 
-        <group position={axisOrigin}>
-          <axesHelper args={[axisLength]} />
-        </group>
-        <gridHelper
-          args={[span * 2, isVerticalProfileMode ? Math.max(Math.round(span / Math.max(depthGuideStep, 1)), 12) : 20, "#688597", "#b6c3cc"]}
-          position={[center[0], center[1], surfaceGridZ]}
-          rotation={[Math.PI / 2, 0, 0]}
-        />
+          <group position={axisOrigin}>
+            <axesHelper args={[axisLength]} />
+          </group>
+          <gridHelper
+            args={[span * 2, isVerticalProfileMode ? Math.max(Math.round(span / Math.max(depthGuideStep, 1)), 12) : 20, "#688597", "#b6c3cc"]}
+            position={[center[0], center[1], surfaceGridZ]}
+            rotation={[Math.PI / 2, 0, 0]}
+          />
 
-        {depthGuides.map((guide) => {
-          return (
-            <group key={`depth-guide-${guide.tvd}`}>
-              {showDepthGuides ? (
-                <>
-                  <Line
-                    points={[
-                      [depthGuideXStart, center[1], guide.z],
-                      [depthGuideXEnd, center[1], guide.z],
-                    ]}
-                    color="#c5d1d9"
-                    lineWidth={1}
-                  />
-                  <Line
-                    points={[
-                      [center[0], depthGuideYStart, guide.z],
-                      [center[0], depthGuideYEnd, guide.z],
-                    ]}
-                    color="#d1dce2"
-                    lineWidth={1}
-                  />
-                  <Line
-                    points={[
-                      [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
-                      [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
-                    ]}
-                    color="#4f6b7b"
-                    lineWidth={1.6}
-                  />
-                </>
-              ) : null}
-              {showDepthLabels ? (
-                <Html
-                  position={[depthGuideLabelX, depthGuideLabelY, guide.z]}
-                  center
-                >
-                  <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
-                </Html>
-              ) : null}
-            </group>
-          );
-        })}
+          {depthGuides.map((guide) => {
+            return (
+              <group key={`depth-guide-${guide.tvd}`}>
+                {showDepthGuides ? (
+                  <>
+                    <Line
+                      points={[
+                        [depthGuideXStart, center[1], guide.z],
+                        [depthGuideXEnd, center[1], guide.z],
+                      ]}
+                      color="#c5d1d9"
+                      lineWidth={1}
+                    />
+                    <Line
+                      points={[
+                        [center[0], depthGuideYStart, guide.z],
+                        [center[0], depthGuideYEnd, guide.z],
+                      ]}
+                      color="#d1dce2"
+                      lineWidth={1}
+                    />
+                    <Line
+                      points={[
+                        [depthAxisX - depthTickHalfWidth, depthAxisY, guide.z],
+                        [depthAxisX + depthTickHalfWidth, depthAxisY, guide.z],
+                      ]}
+                      color="#4f6b7b"
+                      lineWidth={1.6}
+                    />
+                  </>
+                ) : null}
+                {showDepthLabels ? (
+                  <Html position={[depthGuideLabelX, depthGuideLabelY, guide.z]} center>
+                    <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
+                  </Html>
+                ) : null}
+              </group>
+            );
+          })}
 
-        <Line
-          points={[
-            [depthAxisX, depthAxisY, -minTvd],
-            [depthAxisX, depthAxisY, -maxTvd],
-          ]}
-          color="#3f6478"
-          lineWidth={1.9}
-        />
+          <Line
+            points={[
+              [depthAxisX, depthAxisY, -minTvd],
+              [depthAxisX, depthAxisY, -maxTvd],
+            ]}
+            color="#3f6478"
+            lineWidth={1.9}
+          />
 
-        <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
-          <div className="depth-axis-title">TVD</div>
-        </Html>
-
-        {verticalReferencePoints.length === 2 ? (
-          <>
-            <Line points={verticalReferencePoints} color="#9b5c58" lineWidth={1.8} />
-            <Html position={verticalReferencePoints[0]} center distanceFactor={18}>
-              <div className="axis-tag axis-tag-reference">Vertical Reference</div>
-            </Html>
-          </>
-        ) : null}
-
-        {maxOffsetConnectorPoints.length === 2 ? (
-          <Line points={maxOffsetConnectorPoints} color="#c08a33" lineWidth={1.6} />
-        ) : null}
-
-        {activeReferenceConnectorPoints.length === 2 ? (
-          <Line points={activeReferenceConnectorPoints} color="#f28f3b" lineWidth={2.3} />
-        ) : null}
-
-        <Line points={linePoints} color={isVerticalProfileMode ? "#1d6d8d" : "#0f7b8a"} lineWidth={3} />
-
-        {formationIntervals.map((formation) => (
-          <mesh key={`${formation.id}-volume`} position={formation.volume.position}>
-            <boxGeometry args={formation.volume.size} />
-            <meshStandardMaterial
-              color={formation.color}
-              transparent
-              opacity={formation.opacity}
-              depthWrite={false}
-            />
-          </mesh>
-        ))}
-
-        {formationIntervals.flatMap((formation) =>
-          formation.segments.map((segmentPoints, segmentIndex) => (
-            <Line
-              key={`${formation.id}-segment-${segmentIndex}`}
-              points={segmentPoints}
-              color={formation.color}
-              lineWidth={5}
-            />
-          )),
-        )}
-
-        {linePoints.map((position, index) => (
-          <mesh
-            key={`pt-${normalizedPoints[index]?.pointIndex ?? index}`}
-            position={position}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
-              onSelectPoint?.(selectedPointIndex === pointIdentifier ? null : pointIdentifier);
-            }}
-            onPointerOver={(event) => {
-              event.stopPropagation();
-              setHoverPointIndex(normalizedPoints[index]?.pointIndex ?? index);
-            }}
-            onPointerOut={(event) => {
-              event.stopPropagation();
-              const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
-              setHoverPointIndex((currentIndex) => (currentIndex === pointIdentifier ? null : currentIndex));
-            }}
-          >
-            <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
-            <meshStandardMaterial
-              color={
-                normalizedPoints[index]?.pointIndex === selectedPointIndex
-                  ? "#f28f3b"
-                  : normalizedPoints[index]?.pointIndex === hoverPointIndex
-                    ? "#e9a963"
-                    : "#3f7d9e"
-              }
-              transparent
-              opacity={
-                normalizedPoints[index]?.pointIndex === selectedPointIndex
-                  ? 0.95
-                  : normalizedPoints[index]?.pointIndex === hoverPointIndex
-                    ? 0.78
-                    : 0.45
-              }
-            />
-          </mesh>
-        ))}
-
-        <mesh position={linePoints[0]}>
-          <sphereGeometry args={[endpointRadius, 24, 24]} />
-          <meshStandardMaterial color="#0d5e14" />
-        </mesh>
-
-        <mesh position={linePoints[linePoints.length - 1]}>
-          <sphereGeometry args={[endpointRadius, 24, 24]} />
-          <meshStandardMaterial color="#c7472f" />
-        </mesh>
-
-        {activePoint && activePosition ? (
-          <Html position={activePosition} center distanceFactor={14}>
-            <div className="depth-pill">
-              {selectedPointIndex !== null ? "Selected" : "Hover"} | MD: {formatNumber(activePoint.md, 1)} ft | TVD: {formatNumber(activePoint.tvd ?? activePoint.z, 1)} ft
-            </div>
+          <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
+            <div className="depth-axis-title">TVD</div>
           </Html>
-        ) : null}
 
-        <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
-          <div className="axis-tag axis-tag-east">X / E</div>
-        </Html>
-        <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
-          <div className="axis-tag axis-tag-north">Y / N</div>
-        </Html>
-        <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
-          <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
-        </Html>
+          {verticalReferencePoints.length === 2 ? (
+            <>
+              <Line points={verticalReferencePoints} color="#9b5c58" lineWidth={1.8} />
+              <Html position={verticalReferencePoints[0]} center distanceFactor={18}>
+                <div className="axis-tag axis-tag-reference">Vertical Reference</div>
+              </Html>
+            </>
+          ) : null}
 
-        <OrbitControls
-          ref={orbitControlsRef}
-          makeDefault
-          target={center}
-          enableDamping
-          dampingFactor={0.08}
-          minPolarAngle={
-            usingIsometricMode ? ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MIN
-          }
-          maxPolarAngle={
-            usingIsometricMode ? ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MAX
-          }
-          minAzimuthAngle={-Infinity}
-          maxAzimuthAngle={Infinity}
-        />
+          {maxOffsetConnectorPoints.length === 2 ? (
+            <Line points={maxOffsetConnectorPoints} color="#c08a33" lineWidth={1.6} />
+          ) : null}
 
-        <CameraSpinner controlsRef={orbitControlsRef} enabled={spinEnabled} axis={spinAxis} speed={spinSpeed} />
-      </Canvas>
+          {activeReferenceConnectorPoints.length === 2 ? (
+            <Line points={activeReferenceConnectorPoints} color="#f28f3b" lineWidth={2.3} />
+          ) : null}
+
+          <Line points={linePoints} color={isVerticalProfileMode ? "#1d6d8d" : "#0f7b8a"} lineWidth={3} />
+
+          {formationIntervals.map((formation) => (
+            <mesh key={`${formation.id}-volume`} position={formation.volume.position}>
+              <boxGeometry args={formation.volume.size} />
+              <meshStandardMaterial
+                color={formation.color}
+                transparent
+                opacity={formation.opacity}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
+
+          {formationIntervals.flatMap((formation) =>
+            formation.segments.map((segmentPoints, segmentIndex) => (
+              <Line
+                key={`${formation.id}-segment-${segmentIndex}`}
+                points={segmentPoints}
+                color={formation.color}
+                lineWidth={5}
+              />
+            )),
+          )}
+
+          {linePoints.map((position, index) => (
+            <mesh
+              key={`pt-${normalizedPoints[index]?.pointIndex ?? index}`}
+              position={position}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
+                onSelectPoint?.(selectedPointIndex === pointIdentifier ? null : pointIdentifier);
+              }}
+              onPointerOver={(event) => {
+                event.stopPropagation();
+                setHoverPointIndex(normalizedPoints[index]?.pointIndex ?? index);
+              }}
+              onPointerOut={(event) => {
+                event.stopPropagation();
+                const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
+                setHoverPointIndex((currentIndex) => (currentIndex === pointIdentifier ? null : currentIndex));
+              }}
+            >
+              <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
+              <meshStandardMaterial
+                color={
+                  normalizedPoints[index]?.pointIndex === selectedPointIndex
+                    ? "#f28f3b"
+                    : normalizedPoints[index]?.pointIndex === hoverPointIndex
+                      ? "#e9a963"
+                      : "#3f7d9e"
+                }
+                transparent
+                opacity={
+                  normalizedPoints[index]?.pointIndex === selectedPointIndex
+                    ? 0.95
+                    : normalizedPoints[index]?.pointIndex === hoverPointIndex
+                      ? 0.78
+                      : 0.45
+                }
+              />
+            </mesh>
+          ))}
+
+          <mesh position={linePoints[0]}>
+            <sphereGeometry args={[endpointRadius, 24, 24]} />
+            <meshStandardMaterial color="#0d5e14" />
+          </mesh>
+
+          <mesh position={linePoints[linePoints.length - 1]}>
+            <sphereGeometry args={[endpointRadius, 24, 24]} />
+            <meshStandardMaterial color="#c7472f" />
+          </mesh>
+
+          {activePoint && activePosition ? (
+            <Html position={activePosition} center distanceFactor={14}>
+              <div className="depth-pill">
+                {selectedPointIndex !== null ? "Selected" : "Hover"} | MD: {formatNumber(activePoint.md, 1)} ft | TVD: {formatNumber(activePoint.tvd ?? activePoint.z, 1)} ft
+              </div>
+            </Html>
+          ) : null}
+
+          <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
+            <div className="axis-tag axis-tag-east">X / E</div>
+          </Html>
+          <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
+            <div className="axis-tag axis-tag-north">Y / N</div>
+          </Html>
+          <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
+            <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
+          </Html>
+
+          <OrbitControls
+            ref={orbitControlsRef}
+            makeDefault
+            target={center}
+            enableDamping
+            dampingFactor={0.08}
+            minPolarAngle={
+              usingIsometricMode ? ISOMETRIC_POLAR_ANGLE - ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MIN
+            }
+            maxPolarAngle={
+              usingIsometricMode ? ISOMETRIC_POLAR_ANGLE + ISOMETRIC_POLAR_LOCK_EPSILON : FREE_POLAR_MAX
+            }
+            minAzimuthAngle={-Infinity}
+            maxAzimuthAngle={Infinity}
+          />
+
+          <CameraSpinner controlsRef={orbitControlsRef} enabled={spinEnabled} axis={spinAxis} speed={spinSpeed} />
+        </Canvas>
+      </WebGlViewerGuard>
 
       <section className="inspector-card" aria-live="polite">
         <div className="inspector-header">
