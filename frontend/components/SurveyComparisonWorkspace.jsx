@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import AppRouteNav from "@/components/AppRouteNav";
+import RiskAnalysisTable from "@/components/RiskAnalysisTable";
 import WellTrajectoryViewer from "@/components/WellTrajectoryViewer";
 import SurveyImportMapper from "@/components/import/SurveyImportMapper";
 import {
@@ -20,6 +21,22 @@ import {
   resolveMdWindow,
   sortStationsByMd,
 } from "@/lib/surveyComparison";
+import {
+  DEFAULT_RISK_SETTING_INPUTS,
+  MAX_WINDOW_FT,
+  RISK_WINDOW_FT,
+  analyzeWellboreRisk,
+  buildRiskCsv,
+  parseRiskSettings,
+} from "@/lib/wellboreRisk";
+
+const RISK_SETTING_FIELDS = [
+  { key: "high25", label: "High: 25-ft DLS ≥", unit: "deg/100ft" },
+  { key: "review25", label: "Review: 25-ft DLS ≥", unit: "deg/100ft" },
+  { key: "spikeDls", label: "Native spike DLS ≥", unit: "deg/100ft" },
+  { key: "sustainedFt", label: "Sustained over ≥", unit: "ft" },
+];
+const ZONE_HIGHLIGHT_COLOR = "#7b4fd6";
 
 const SURVEY_SLOTS = [
   {
@@ -99,6 +116,8 @@ export default function SurveyComparisonWorkspace() {
   const [appliedMdWindow, setAppliedMdWindow] = useState(null);
   const [mdError, setMdError] = useState("");
   const [thresholdInputs, setThresholdInputs] = useState(DEFAULT_DLS_THRESHOLD_INPUTS);
+  const [riskInputs, setRiskInputs] = useState(DEFAULT_RISK_SETTING_INPUTS);
+  const [selectedZoneId, setSelectedZoneId] = useState(null);
 
   const stations = useMemo(
     () => ({
@@ -157,6 +176,36 @@ export default function SurveyComparisonWorkspace() {
     [thresholds, visibleStations],
   );
 
+  const riskSettings = useMemo(() => parseRiskSettings(riskInputs), [riskInputs]);
+
+  const riskAnalysis = useMemo(
+    () =>
+      riskSettings.isValid
+        ? analyzeWellboreRisk({ gyroStations: stations.gyro, drillingStations: stations.drilling, settings: riskSettings.settings })
+        : null,
+    [riskSettings, stations],
+  );
+
+  const selectedZone = useMemo(
+    () => riskAnalysis?.zones.find((zone) => zone.id === selectedZoneId) ?? null,
+    [riskAnalysis, selectedZoneId],
+  );
+
+  const zoneHighlights = useMemo(() => {
+    if (!selectedZone) {
+      return { drilling: null, gyro: null };
+    }
+
+    const drillingBefore = [...stations.drilling].reverse().find((station) => station.md <= selectedZone.startMd);
+    const drillingAfter = stations.drilling.find((station) => station.md >= selectedZone.endMd);
+
+    return {
+      gyro: { start: selectedZone.startMd, end: selectedZone.endMd },
+      drilling:
+        drillingBefore && drillingAfter ? { start: drillingBefore.md, end: drillingAfter.md } : null,
+    };
+  }, [selectedZone, stations.drilling]);
+
   const firstStationMds = {
     drilling: stations.drilling[0]?.md ?? null,
     gyro: stations.gyro[0]?.md ?? null,
@@ -179,6 +228,7 @@ export default function SurveyComparisonWorkspace() {
       }));
       setSelectedPoints((previous) => ({ ...previous, [slotKey]: null }));
       setOpenPanels((previous) => ({ ...previous, [slotKey]: false }));
+      setSelectedZoneId(null);
     },
     [],
   );
@@ -186,6 +236,7 @@ export default function SurveyComparisonWorkspace() {
   const handleClearSurvey = useCallback((slotKey) => {
     setSurveys((previous) => ({ ...previous, [slotKey]: EMPTY_SURVEY }));
     setSelectedPoints((previous) => ({ ...previous, [slotKey]: null }));
+    setSelectedZoneId(null);
     setMapperKeys((previous) => ({ ...previous, [slotKey]: previous[slotKey] + 1 }));
     setOpenPanels((previous) => ({ ...previous, [slotKey]: true }));
   }, []);
@@ -218,7 +269,49 @@ export default function SurveyComparisonWorkspace() {
     setAppliedMdWindow(null);
     setMdInputs({ start: null, end: null });
     setMdError("");
+    setSelectedZoneId(null);
   }, []);
+
+  const handleSelectZone = useCallback(
+    (zone) => {
+      if (zone.id === selectedZoneId) {
+        setSelectedZoneId(null);
+        return;
+      }
+
+      const padding = Math.max(50, zone.length * 0.5);
+      const drillingBefore = [...stations.drilling].reverse().find((station) => station.md <= zone.startMd);
+      const drillingAfter = stations.drilling.find((station) => station.md >= zone.endMd);
+      const start = Math.min(zone.startMd - padding, drillingBefore?.md ?? Number.POSITIVE_INFINITY);
+      const end = Math.max(zone.endMd + padding, drillingAfter?.md ?? Number.NEGATIVE_INFINITY);
+
+      applyMdWindow(start, end);
+      setSelectedZoneId(zone.id);
+    },
+    [applyMdWindow, selectedZoneId, stations.drilling],
+  );
+
+  const handleExportRiskCsv = useCallback(() => {
+    if (!riskAnalysis || !riskSettings.isValid) {
+      return;
+    }
+
+    const csv = buildRiskCsv({
+      analysis: riskAnalysis,
+      settings: riskSettings.settings,
+      gyroLabel: surveys.gyro.sourceLabel,
+      drillingLabel: surveys.drilling.sourceLabel,
+    });
+    const baseName = (surveys.gyro.sourceLabel || "gyro").replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_-]+/g, "-");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `wellbore-risk-analysis-${baseName}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }, [riskAnalysis, riskSettings, surveys.drilling.sourceLabel, surveys.gyro.sourceLabel]);
 
   const startInputValue = mdInputs.start ?? (activeMdWindow ? String(activeMdWindow.start) : "");
   const endInputValue = mdInputs.end ?? (activeMdWindow ? String(activeMdWindow.end) : "");
@@ -342,7 +435,7 @@ export default function SurveyComparisonWorkspace() {
           </section>
 
           <section className="metadata-block compare-settings-block" aria-label="DLS thresholds">
-            <p className="metadata-title">DLS Thresholds ({DLS_UNITS})</p>
+            <p className="metadata-title">Station Markers: Imported DLS ({DLS_UNITS})</p>
             <div className="metadata-grid metadata-grid-two-up">
               <label className="mapper-field" htmlFor="compare-red-threshold">
                 <span>Red: DLS &gt; X</span>
@@ -384,10 +477,51 @@ export default function SurveyComparisonWorkspace() {
               ))}
             </ul>
             <p className="helper-note">
-              Colors use each station&apos;s imported DLS only; nothing is calculated or interpolated. Trajectory lines simply
-              connect stations and do not indicate DLS between them.
+              Marker colors show each station&apos;s imported DLS only. Depth-interval risk is shown separately in the Wellbore
+              Risk Analysis table. Trajectory lines connect stations and do not indicate DLS between them.
             </p>
           </section>
+
+          <details className="lateral-profile-data-panel compare-survey-panel" aria-label="Risk screening settings">
+            <summary className="lateral-profile-data-summary compare-survey-summary">
+              <span>Risk Screening (gyro)</span>
+              <span className="compare-survey-status">
+                {riskSettings.isValid
+                  ? `High ≥ ${riskSettings.settings.high25} · Review ≥ ${riskSettings.settings.review25} · Spike ≥ ${riskSettings.settings.spikeDls} / ${riskSettings.settings.sustainedFt} ft`
+                  : "Invalid thresholds"}
+              </span>
+            </summary>
+            <div className="compare-survey-body">
+              <div className="metadata-grid metadata-grid-two-up">
+                {RISK_SETTING_FIELDS.map((field) => (
+                  <label key={field.key} className="mapper-field" htmlFor={`risk-setting-${field.key}`}>
+                    <span>
+                      {field.label} ({field.unit})
+                    </span>
+                    <input
+                      id={`risk-setting-${field.key}`}
+                      type="number"
+                      min="0"
+                      step={field.key === "sustainedFt" ? "5" : "0.5"}
+                      className={`mapper-input ${riskSettings.isValid ? "" : "is-invalid"}`}
+                      value={riskInputs[field.key]}
+                      onChange={(event) => setRiskInputs((previous) => ({ ...previous, [field.key]: event.target.value }))}
+                    />
+                  </label>
+                ))}
+              </div>
+              {riskSettings.isValid ? null : <p className="warning">{riskSettings.message}</p>}
+              <p className="helper-note">
+                High: 25-ft DLS ≥ High, or native DLS ≥ Spike sustained over the set length. Review: 25-ft DLS ≥ Review, an
+                isolated native spike, or data that cannot be assessed. 25-ft DLS uses the next station at or beyond{" "}
+                {RISK_WINDOW_FT} ft (max {MAX_WINDOW_FT} ft).
+              </p>
+              <p className="compare-zone-legend">
+                <span className="compare-zone-swatch" style={{ backgroundColor: ZONE_HIGHLIGHT_COLOR }} aria-hidden="true" />
+                Selected zone (gyro) and overlapping drilling course
+              </p>
+            </div>
+          </details>
 
           <section className="metadata-block compare-settings-block" aria-label="Comparison reference notes">
             <p className="metadata-title">Reference</p>
@@ -454,6 +588,8 @@ export default function SurveyComparisonWorkspace() {
                       getPointAppearance={getPointAppearance}
                       depthGuideStep={depthGuideStep}
                       endpointColors={COMPARISON_ENDPOINT_COLORS}
+                      highlightMdRange={zoneHighlights[slot.key]}
+                      highlightColor={ZONE_HIGHLIGHT_COLOR}
                       emptyStateMessage={emptyStateMessage}
                       compact
                     />
@@ -462,6 +598,16 @@ export default function SurveyComparisonWorkspace() {
               );
             })}
           </div>
+
+          <RiskAnalysisTable
+            analysis={riskAnalysis}
+            hasGyro={stations.gyro.length > 0}
+            settingsMessage={riskSettings.isValid ? null : riskSettings.message}
+            selectedZoneId={selectedZone?.id ?? null}
+            onSelectZone={handleSelectZone}
+            onClearSelection={() => setSelectedZoneId(null)}
+            onExport={handleExportRiskCsv}
+          />
         </section>
       </main>
     </>

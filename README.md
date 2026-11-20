@@ -18,7 +18,7 @@ See `docs/TECHNICAL_AUDIT_2026-11.md` for the technical audit and its current st
 |---|---|
 | `/single-well` | One survey: 3D wellbore, 2D lateral profile (TVD vs MD), vertical profile mode, formation overlays, point inspector. |
 | `/dsu-view` | Several surveys placed by surface latitude/longitude in one 3D scene. |
-| `/survey-compare` | Drilling survey (left) vs. gyro survey (right) in side-by-side 3D viewers with a synchronized MD window and red/yellow DLS station highlighting. |
+| `/survey-compare` | Drilling survey (left) vs. gyro survey (right) in side-by-side 3D viewers with a synchronized MD window, imported-DLS station markers, and a Wellbore Risk Analysis table. |
 
 ### Gyro vs. Drilling Survey comparison
 
@@ -26,8 +26,9 @@ See `docs/TECHNICAL_AUDIT_2026-11.md` for the technical audit and its current st
 2. Set a **Synchronized MD Window** (or use *Full Range* / *Fit Drilling Coverage* / *Fit Gyro Coverage*). The window may extend past either survey's coverage; only imported stations are drawn.
 3. Set **DLS thresholds** in deg/100ft: stations with DLS > X are red, DLS > Y and ≤ X are yellow (X must be greater than Y). Normal stations stay blue; stations without an imported DLS value are grey.
 4. Hover or click a station to see its MD, TVD, DLS, inclination, azimuth, and DLS flag.
+5. Review the **Wellbore Risk Analysis** table: gyro intervals are screened as **High** or **Review** using imported native DLS, calculated 25-ft DLS, and sustained native DLS, with drilling-survey context per zone. Click a row to focus both viewers on that MD window, adjust the criteria under *Risk Screening*, and use **Export CSV** for a client-side copy. Methodology: `docs/WELLBORE_RISK_SCREENING.md`.
 
-DLS values are used exactly as imported; the app does not calculate, interpolate, or smooth DLS. Trajectory lines connect stations and do not indicate DLS between them. Both viewers share scale, orientation, and TVD axis; each trajectory is drawn from its own first imported station, and neither survey is shifted to line up with the other.
+Station markers use imported DLS exactly as provided. The only calculated curvature is the separately labeled 25-ft DLS used for risk screening; imported values are never modified. Risk results are screening indicators, not equipment passability determinations. Trajectory lines connect stations and do not indicate DLS between them. Both viewers share scale, orientation, and TVD axis; each trajectory is drawn from its own first imported station, and neither survey is shifted to line up with the other.
 
 ## Local Development
 

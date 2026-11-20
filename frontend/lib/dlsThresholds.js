@@ -6,7 +6,7 @@ export const DLS_CATEGORY = {
 };
 
 export const DEFAULT_DLS_THRESHOLD_INPUTS = {
-  red: "5",
+  red: "6",
   yellow: "3",
 };
 

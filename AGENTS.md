@@ -6,7 +6,7 @@
 - Lint uses ESLint 9 flat config (`frontend/eslint.config.mjs`). The React Compiler rules `react-hooks/set-state-in-effect` and `react-hooks/preserve-manual-memoization` are warnings for pre-existing code; don't add new violations.
 - Unit tests (vitest) live next to the modules in `frontend/lib/*.test.js`. Domain logic belongs in `frontend/lib/` as pure functions.
 - 3D labels: use `components/SceneLabel.jsx`, not drei's `<Html>`. drei 10's `Html` unmounts its React root synchronously during commit, which throws `removeChild` errors on React 19.
-- `WellTrajectoryViewer` is shared by Single Well and Survey Compare. Optional props (`frameBounds`, `getPointAppearance`, `compact`, `endpointColors`) must keep default behavior unchanged for Single Well.
-- DLS in the comparison view is the imported value only; never calculate, interpolate, or smooth it.
+- `WellTrajectoryViewer` is shared by Single Well and Survey Compare. Optional props (`frameBounds`, `getPointAppearance`, `compact`, `endpointColors`, `highlightMdRange`, `highlightColor`) must keep default behavior unchanged for Single Well.
+- Comparison view: station markers use imported DLS only. Calculated curvature (25-ft DLS) lives in `lib/wellboreRisk.js`, must stay labeled as calculated, and must never overwrite or smooth imported values. See `docs/WELLBORE_RISK_SCREENING.md` before changing screening rules.
 - Survey data must never leave the browser: no network calls, storage, or logging of survey contents.
 - `rg` is not installed in this environment; use `grep`.

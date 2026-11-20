@@ -20,6 +20,7 @@ const AXIS_VECTORS = {
 
 const COARSE_DEPTH_GUIDE_STEP = 1000;
 const DEFAULT_ENDPOINT_COLORS = { start: "#0d5e14", end: "#c7472f" };
+const DEFAULT_HIGHLIGHT_COLOR = "#7b4fd6";
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -143,6 +144,8 @@ export default function WellTrajectoryViewer({
   getPointAppearance = null,
   compact = false,
   endpointColors = DEFAULT_ENDPOINT_COLORS,
+  highlightMdRange = null,
+  highlightColor = DEFAULT_HIGHLIGHT_COLOR,
 }) {
   const controlIdPrefix = useId();
   const sharedFrame = useMemo(() => getFrameBounds(frameBounds), [frameBounds]);
@@ -446,6 +449,24 @@ export default function WellTrajectoryViewer({
     () => (typeof getPointAppearance === "function" ? normalizedPoints.map((point) => getPointAppearance(point)) : null),
     [getPointAppearance, normalizedPoints],
   );
+  const highlightPoints = useMemo(() => {
+    const startMd = toFiniteNumber(highlightMdRange?.start);
+    const endMd = toFiniteNumber(highlightMdRange?.end);
+
+    if (startMd === null || endMd === null) {
+      return [];
+    }
+
+    return normalizedPoints.reduce((accumulator, point, index) => {
+      const md = toFiniteNumber(point.md);
+
+      if (md !== null && md >= startMd - 1e-6 && md <= endMd + 1e-6 && linePoints[index]) {
+        accumulator.push(linePoints[index]);
+      }
+
+      return accumulator;
+    }, []);
+  }, [highlightMdRange?.end, highlightMdRange?.start, linePoints, normalizedPoints]);
   const activeAppearance =
     activePoint && pointAppearances ? pointAppearances[normalizedPoints.indexOf(activePoint)] ?? null : null;
   const activePosition =
@@ -670,6 +691,10 @@ export default function WellTrajectoryViewer({
           ) : null}
 
           <Line points={linePoints} color={isVerticalProfileMode ? "#1d6d8d" : "#0f7b8a"} lineWidth={3} />
+
+          {highlightPoints.length >= 2 ? (
+            <Line points={highlightPoints} color={highlightColor} lineWidth={10} transparent opacity={0.5} depthWrite={false} />
+          ) : null}
 
           {formationIntervals.map((formation) => (
             <mesh key={`${formation.id}-volume`} position={formation.volume.position}>

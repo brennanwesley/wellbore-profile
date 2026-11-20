@@ -129,3 +129,8 @@ None. Nothing found exposes user data or breaks current production workflows.
 - **M2 partially done.** Imported Azimuth, VS, and Sub-Sea are now kept on each station; the point inspector shows Azimuth.
 - **New:** `/survey-compare` gyro vs. drilling comparison (side-by-side 3D viewers, synchronized MD window, imported-DLS red/yellow station highlighting). Logic in `lib/dlsThresholds.js` and `lib/surveyComparison.js` with unit tests.
 - **Known limitation (M5 still open):** stations are still rendered as one mesh each. A 1,520-station gyro loads in under 0.5 s, but with two viewers open, frame rate on low-end or software-rendered GPUs is modest. Move station markers to `InstancedMesh` if dense surveys become common.
+
+## 9. Status update – Sprint 2 (2026-11-20)
+- **M2 partially addressed for the comparison view.** Added calculated 25-ft DLS (minimum-curvature dogleg over ~25-ft station windows), kept separate from imported DLS, for gyro risk screening. See `docs/WELLBORE_RISK_SCREENING.md`.
+- **H4 partially addressed for gyro screening.** Station gaps, missing inclination/azimuth, and too-short coverage are flagged as *Review – Not assessed* rather than treated as normal.
+- Station marker defaults changed to red > 6 / yellow > 3 deg/100ft to align with the risk criteria.
