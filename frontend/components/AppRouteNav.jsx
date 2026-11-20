@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { href: "/workspace", label: "Workspace" },
   { href: "/single-well", label: "Single Well" },
   { href: "/dsu-view", label: "DSU View" },
+  { href: "/survey-compare", label: "Survey Compare" },
 ];
 
 export default function AppRouteNav({ currentPath, variant = "inline" }) {

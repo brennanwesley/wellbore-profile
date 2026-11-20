@@ -1,7 +1,8 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, Line, OrbitControls } from "@react-three/drei";
+import { Line, OrbitControls } from "@react-three/drei";
+import SceneLabel from "@/components/SceneLabel";
 import WebGlViewerGuard from "@/components/WebGlViewerGuard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Vector3 } from "three";
@@ -274,9 +275,9 @@ export default function MultiWellTrajectoryViewer({ wells }) {
                   </>
                 ) : null}
                 {showDepthLabels ? (
-                  <Html position={[depthGuideLabelX, depthGuideLabelY, guideZ]} center>
+                  <SceneLabel position={[depthGuideLabelX, depthGuideLabelY, guideZ]} center>
                     <div className="depth-gridline-label">TVD {formatNumber(Math.abs(tvdValue), 0)} ft</div>
-                  </Html>
+                  </SceneLabel>
                 ) : null}
               </group>
             );
@@ -284,9 +285,9 @@ export default function MultiWellTrajectoryViewer({ wells }) {
 
           <Line points={[[depthAxisX, depthAxisY, -shallowestTvd], [depthAxisX, depthAxisY, -deepestTvd]]} color="#3f6478" lineWidth={1.9} />
 
-          <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
+          <SceneLabel position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
             <div className="depth-axis-title">TVD</div>
-          </Html>
+          </SceneLabel>
 
           {renderWells.map((well) => (
             <group key={`well-${well.id}`}>
@@ -297,11 +298,11 @@ export default function MultiWellTrajectoryViewer({ wells }) {
                 <meshStandardMaterial color={well.color} />
               </mesh>
 
-              <Html position={[well.surfaceOffsetEastingFt, well.surfaceOffsetNorthingFt, surfaceGridZ]} center distanceFactor={24}>
+              <SceneLabel position={[well.surfaceOffsetEastingFt, well.surfaceOffsetNorthingFt, surfaceGridZ]} center distanceFactor={24}>
                 <div className="axis-tag dsu-well-label" style={{ borderColor: well.color, color: well.color }}>
                   {well.wellName}
                 </div>
-              </Html>
+              </SceneLabel>
 
               {well.pointEntries.map((entry) => {
                 const currentTarget = { wellId: well.id, pointIndex: entry.pointIndex };
@@ -338,22 +339,22 @@ export default function MultiWellTrajectoryViewer({ wells }) {
           ))}
 
           {activeWell && activeEntry ? (
-            <Html position={activeEntry.position} center distanceFactor={14}>
+            <SceneLabel position={activeEntry.position} center distanceFactor={14}>
               <div className="depth-pill">
                 {selectedTarget ? "Selected" : "Hover"} | {activeWell.wellName} | MD: {formatNumber(activeEntry.point.md, 1)} ft
               </div>
-            </Html>
+            </SceneLabel>
           ) : null}
 
-          <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
+          <SceneLabel position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
             <div className="axis-tag axis-tag-east">X / E</div>
-          </Html>
-          <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
+          </SceneLabel>
+          <SceneLabel position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
             <div className="axis-tag axis-tag-north">Y / N</div>
-          </Html>
-          <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
+          </SceneLabel>
+          <SceneLabel position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
             <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
-          </Html>
+          </SceneLabel>
 
           <OrbitControls
             ref={orbitControlsRef}

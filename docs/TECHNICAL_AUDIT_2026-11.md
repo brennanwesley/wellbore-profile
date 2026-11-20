@@ -121,3 +121,11 @@ None. Nothing found exposes user data or breaks current production workflows.
 ## 7. Changes made in this audit
 - **Fix – auto-mapping false matches** (`lib/surveyImport.js`, `suggestMappings`). Headers of 1–2 characters were reverse-matched against aliases (e.g. `n` is a substring of `inclination`). A file with `MD,TVD,N,E` headers auto-mapped Inclination, Azimuth, VS, and Annotations to the **N** column and DLS and Sub-Sea to the **E** column, so the inspector silently showed coordinates as inclination/DLS. Reverse matching now requires ≥ 3 characters, the same guard `detectHeaderRowIndex` already uses. Exact matches (`NS`, `EW`, `VS`) are unchanged. Covered by 2 new tests that fail without the fix.
 - README updated to reflect the actual (static, client-only) architecture.
+
+## 8. Status update – Sprint 1 (2026-11-20)
+- **H2 resolved.** Frontend upgraded to Next.js 16.4.6, React 19.3.1, React Three Fiber 9.8.2, drei 10.7.9; ESLint 9 flat config replaces `next lint`. Transitive advisories fixed with non-breaking updates (`npm audit fix`, Express 4.22.3 lockfile bump). `npm audit` (prod and dev): **0 vulnerabilities**.
+- **React 19 regression fixed.** drei 10's `Html` threw `removeChild` errors whenever a 3D viewer unmounted (mode switch, navigation). Replaced with `components/SceneLabel.jsx`, which defers root unmounts out of React's commit phase and is pointer-transparent.
+- **M1 partially done.** Removed the unused frontend Supabase client and dependency, `lib/parseCoordinates.js`, the obsolete `public/data/well-1.csv` sample, and `frontend/.env.local.example`. `backend/` and `render.yaml` are intentionally retained because the Render service remains active; remove them once it is retired.
+- **M2 partially done.** Imported Azimuth, VS, and Sub-Sea are now kept on each station; the point inspector shows Azimuth.
+- **New:** `/survey-compare` gyro vs. drilling comparison (side-by-side 3D viewers, synchronized MD window, imported-DLS red/yellow station highlighting). Logic in `lib/dlsThresholds.js` and `lib/surveyComparison.js` with unit tests.
+- **Known limitation (M5 still open):** stations are still rendered as one mesh each. A 1,520-station gyro loads in under 0.5 s, but with two viewers open, frame rate on low-end or software-rendered GPUs is modest. Move station markers to `InstancedMesh` if dense surveys become common.

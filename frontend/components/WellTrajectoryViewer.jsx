@@ -1,9 +1,10 @@
 "use client";
 
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Html, Line, OrbitControls } from "@react-three/drei";
+import { Line, OrbitControls } from "@react-three/drei";
+import SceneLabel from "@/components/SceneLabel";
 import WebGlViewerGuard from "@/components/WebGlViewerGuard";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Vector3 } from "three";
 
 const ISOMETRIC_POLAR_ANGLE = Math.acos(1 / Math.sqrt(3));
@@ -18,6 +19,7 @@ const AXIS_VECTORS = {
 };
 
 const COARSE_DEPTH_GUIDE_STEP = 1000;
+const DEFAULT_ENDPOINT_COLORS = { start: "#0d5e14", end: "#c7472f" };
 
 function toFiniteNumber(value) {
   const cleaned = String(value ?? "").replace(/,/g, "").trim();
@@ -85,6 +87,23 @@ function getBounds(points) {
   return { center, span, bounds };
 }
 
+function getFrameBounds(frameBounds) {
+  if (!frameBounds) {
+    return null;
+  }
+
+  const { minX, maxX, minY, maxY, minTvd, maxTvd } = frameBounds;
+
+  if (![minX, maxX, minY, maxY, minTvd, maxTvd].every(Number.isFinite)) {
+    return null;
+  }
+
+  return getBounds([
+    { x: minX, y: minY, z: minTvd },
+    { x: maxX, y: maxY, z: maxTvd },
+  ]);
+}
+
 function CameraSpinner({ controlsRef, enabled, axis = "z", speed = 0.45 }) {
   const axisVector = useMemo(() => {
     const axisValues = AXIS_VECTORS[axis] || AXIS_VECTORS.z;
@@ -120,7 +139,13 @@ export default function WellTrajectoryViewer({
   verticalReferenceOrigin = null,
   horizontalExaggeration = 1,
   emptyStateMessage = "No valid trajectory to render yet.",
+  frameBounds = null,
+  getPointAppearance = null,
+  compact = false,
+  endpointColors = DEFAULT_ENDPOINT_COLORS,
 }) {
+  const controlIdPrefix = useId();
+  const sharedFrame = useMemo(() => getFrameBounds(frameBounds), [frameBounds]);
   const [hoverPointIndex, setHoverPointIndex] = useState(null);
   const [showDepthGuides, setShowDepthGuides] = useState(false);
   const [showDepthLabels, setShowDepthLabels] = useState(false);
@@ -161,7 +186,7 @@ export default function WellTrajectoryViewer({
     if (isVerticalProfileMode) {
       setSpinAxis("z");
     }
-  }, [isVerticalProfileMode, points]);
+  }, [isVerticalProfileMode, points, sharedFrame]);
 
   const { center, span, bounds } = useMemo(() => {
     if (!hasEnoughPoints) {
@@ -177,6 +202,10 @@ export default function WellTrajectoryViewer({
           maxZ: 0.5,
         },
       };
+    }
+
+    if (sharedFrame && !isVerticalProfileMode) {
+      return sharedFrame;
     }
 
     const originX = toFiniteNumber(verticalReferenceOrigin?.x);
@@ -204,7 +233,7 @@ export default function WellTrajectoryViewer({
     });
 
     return getBounds(renderPoints);
-  }, [effectiveHorizontalExaggeration, hasEnoughPoints, isVerticalProfileMode, normalizedPoints, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y]);
+  }, [effectiveHorizontalExaggeration, hasEnoughPoints, isVerticalProfileMode, normalizedPoints, sharedFrame, verticalReferenceOrigin?.x, verticalReferenceOrigin?.y]);
 
   const linePoints = useMemo(
     () => {
@@ -252,8 +281,8 @@ export default function WellTrajectoryViewer({
       return 0;
     }
 
-    return Math.min(...tvdValues);
-  }, [hasEnoughPoints, normalizedPoints]);
+    return sharedFrame && !isVerticalProfileMode ? -sharedFrame.bounds.maxZ : Math.min(...tvdValues);
+  }, [hasEnoughPoints, isVerticalProfileMode, normalizedPoints, sharedFrame]);
 
   const surfaceGridZ = -shallowestTvd;
 
@@ -270,8 +299,9 @@ export default function WellTrajectoryViewer({
       return { minTvd: 0, maxTvd: 0, tvdTicks: [0] };
     }
 
-    const localMinTvd = Math.min(...tvdValues);
-    const localMaxTvd = Math.max(...tvdValues);
+    const useSharedFrame = Boolean(sharedFrame) && !isVerticalProfileMode;
+    const localMinTvd = useSharedFrame ? -sharedFrame.bounds.maxZ : Math.min(...tvdValues);
+    const localMaxTvd = useSharedFrame ? -sharedFrame.bounds.minZ : Math.max(...tvdValues);
     const tickStep = depthGuideStep;
     const firstTick = Math.floor(localMinTvd / tickStep) * tickStep;
     const lastTick = Math.ceil(localMaxTvd / tickStep) * tickStep;
@@ -286,7 +316,7 @@ export default function WellTrajectoryViewer({
       maxTvd: localMaxTvd,
       tvdTicks: ticks,
     };
-  }, [depthGuideStep, hasEnoughPoints, normalizedPoints]);
+  }, [depthGuideStep, hasEnoughPoints, isVerticalProfileMode, normalizedPoints, sharedFrame]);
 
   const depthGuides = useMemo(() => {
     if (!hasEnoughPoints || tvdTicks.length === 0) {
@@ -412,6 +442,12 @@ export default function WellTrajectoryViewer({
   const activePointIndex = selectedPointIndex ?? hoverPointIndex;
   const activePoint =
     activePointIndex !== null ? normalizedPoints.find((point) => point.pointIndex === activePointIndex) ?? null : null;
+  const pointAppearances = useMemo(
+    () => (typeof getPointAppearance === "function" ? normalizedPoints.map((point) => getPointAppearance(point)) : null),
+    [getPointAppearance, normalizedPoints],
+  );
+  const activeAppearance =
+    activePoint && pointAppearances ? pointAppearances[normalizedPoints.indexOf(activePoint)] ?? null : null;
   const activePosition =
     activePointIndex !== null
       ? (() => {
@@ -530,7 +566,7 @@ export default function WellTrajectoryViewer({
       : [];
 
   return (
-    <div className="viewer-canvas">
+    <div className={`viewer-canvas${compact ? " is-compact" : ""}`}>
       <WebGlViewerGuard
         resetKey={viewerResetKey}
         fallbackTitle="3D wellbore viewer unavailable on this device"
@@ -595,9 +631,9 @@ export default function WellTrajectoryViewer({
                   </>
                 ) : null}
                 {showDepthLabels ? (
-                  <Html position={[depthGuideLabelX, depthGuideLabelY, guide.z]} center>
+                  <SceneLabel position={[depthGuideLabelX, depthGuideLabelY, guide.z]} center>
                     <div className="depth-gridline-label">TVD {formatNumber(Math.abs(guide.tvd), 0)} ft</div>
-                  </Html>
+                  </SceneLabel>
                 ) : null}
               </group>
             );
@@ -612,16 +648,16 @@ export default function WellTrajectoryViewer({
             lineWidth={1.9}
           />
 
-          <Html position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
+          <SceneLabel position={[depthAxisX, depthAxisY, axisOrigin[2] - axisLength]} center distanceFactor={20}>
             <div className="depth-axis-title">TVD</div>
-          </Html>
+          </SceneLabel>
 
           {verticalReferencePoints.length === 2 ? (
             <>
               <Line points={verticalReferencePoints} color="#9b5c58" lineWidth={1.8} />
-              <Html position={verticalReferencePoints[0]} center distanceFactor={18}>
+              <SceneLabel position={verticalReferencePoints[0]} center distanceFactor={18}>
                 <div className="axis-tag axis-tag-reference">Vertical Reference</div>
-              </Html>
+              </SceneLabel>
             </>
           ) : null}
 
@@ -658,9 +694,26 @@ export default function WellTrajectoryViewer({
             )),
           )}
 
-          {linePoints.map((position, index) => (
+          {linePoints.map((position, index) => {
+            const pointIdentifier = normalizedPoints[index]?.pointIndex ?? index;
+            const isSelected = pointIdentifier === selectedPointIndex;
+            const isHovered = pointIdentifier === hoverPointIndex;
+            const appearance = pointAppearances?.[index] ?? null;
+            const markerStyle = appearance
+              ? {
+                  color: appearance.color,
+                  opacity: isSelected || isHovered ? 1 : appearance.opacity,
+                  radius: pointMarkerRadius * (appearance.scale ?? 1) * (isSelected || isHovered ? 1.5 : 1),
+                }
+              : {
+                  color: isSelected ? "#f28f3b" : isHovered ? "#e9a963" : "#3f7d9e",
+                  opacity: isSelected ? 0.95 : isHovered ? 0.78 : 0.45,
+                  radius: pointMarkerRadius,
+                };
+
+            return (
             <mesh
-              key={`pt-${normalizedPoints[index]?.pointIndex ?? index}`}
+              key={`pt-${pointIdentifier}`}
               position={position}
               onPointerDown={(event) => {
                 event.stopPropagation();
@@ -677,54 +730,40 @@ export default function WellTrajectoryViewer({
                 setHoverPointIndex((currentIndex) => (currentIndex === pointIdentifier ? null : currentIndex));
               }}
             >
-              <sphereGeometry args={[pointMarkerRadius, 12, 12]} />
-              <meshStandardMaterial
-                color={
-                  normalizedPoints[index]?.pointIndex === selectedPointIndex
-                    ? "#f28f3b"
-                    : normalizedPoints[index]?.pointIndex === hoverPointIndex
-                      ? "#e9a963"
-                      : "#3f7d9e"
-                }
-                transparent
-                opacity={
-                  normalizedPoints[index]?.pointIndex === selectedPointIndex
-                    ? 0.95
-                    : normalizedPoints[index]?.pointIndex === hoverPointIndex
-                      ? 0.78
-                      : 0.45
-                }
-              />
+              <sphereGeometry args={[markerStyle.radius, 12, 12]} />
+              <meshStandardMaterial color={markerStyle.color} transparent={markerStyle.opacity < 1} opacity={markerStyle.opacity} />
             </mesh>
-          ))}
+            );
+          })}
 
           <mesh position={linePoints[0]}>
             <sphereGeometry args={[endpointRadius, 24, 24]} />
-            <meshStandardMaterial color="#0d5e14" />
+            <meshStandardMaterial color={endpointColors.start} />
           </mesh>
 
           <mesh position={linePoints[linePoints.length - 1]}>
             <sphereGeometry args={[endpointRadius, 24, 24]} />
-            <meshStandardMaterial color="#c7472f" />
+            <meshStandardMaterial color={endpointColors.end} />
           </mesh>
 
           {activePoint && activePosition ? (
-            <Html position={activePosition} center distanceFactor={14}>
+            <SceneLabel position={activePosition} center distanceFactor={14}>
               <div className="depth-pill">
                 {selectedPointIndex !== null ? "Selected" : "Hover"} | MD: {formatNumber(activePoint.md, 1)} ft | TVD: {formatNumber(activePoint.tvd ?? activePoint.z, 1)} ft
+                {activeAppearance ? ` | DLS: ${formatNumber(activePoint.dls, 2)}` : ""}
               </div>
-            </Html>
+            </SceneLabel>
           ) : null}
 
-          <Html position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
+          <SceneLabel position={[axisOrigin[0] + axisLength, axisOrigin[1], axisOrigin[2]]} center distanceFactor={20}>
             <div className="axis-tag axis-tag-east">X / E</div>
-          </Html>
-          <Html position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
+          </SceneLabel>
+          <SceneLabel position={[axisOrigin[0], axisOrigin[1] + axisLength, axisOrigin[2]]} center distanceFactor={20}>
             <div className="axis-tag axis-tag-north">Y / N</div>
-          </Html>
-          <Html position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
+          </SceneLabel>
+          <SceneLabel position={[axisOrigin[0], axisOrigin[1], axisOrigin[2] - axisLength]} center distanceFactor={20}>
             <div className="axis-tag axis-tag-tvd">TVD (+) / -Z</div>
-          </Html>
+          </SceneLabel>
 
           <OrbitControls
             ref={orbitControlsRef}
@@ -780,6 +819,19 @@ export default function WellTrajectoryViewer({
               <dt>Inclination (deg)</dt>
               <dd>{formatNumber(activePoint.inclination, 2)}</dd>
             </div>
+            <div>
+              <dt>Azimuth (deg)</dt>
+              <dd>{formatNumber(activePoint.azimuth, 2)}</dd>
+            </div>
+            {activeAppearance?.label ? (
+              <div className="inspector-flag-cell">
+                <dt>DLS Flag</dt>
+                <dd className="inspector-flag">
+                  <span className="inspector-flag-swatch" style={{ backgroundColor: activeAppearance.color }} aria-hidden="true" />
+                  {activeAppearance.label}
+                </dd>
+              </div>
+            ) : null}
             <div className="inspector-annotation">
               <dt>Annotation</dt>
               <dd>{formatAnnotation(activePoint.annotations)}</dd>
@@ -787,7 +839,7 @@ export default function WellTrajectoryViewer({
           </dl>
         ) : (
           <p className="inspector-empty">
-            Click a trajectory point to select MD, TVD, DLS, inclination, and annotation. Hover previews are temporary.
+            Click or hover a trajectory point to inspect MD, TVD, DLS, inclination, azimuth, and annotation.
           </p>
         )}
       </section>
@@ -867,6 +919,7 @@ export default function WellTrajectoryViewer({
           </button>
         </div>
 
+        {!compact ? (
         <div className="viewer-toolbar-row">
           <button
             type="button"
@@ -876,10 +929,10 @@ export default function WellTrajectoryViewer({
             {spinEnabled ? "Pause Spin" : "Start Spin"}
           </button>
 
-          <label className="viewer-tool-label" htmlFor="spin-axis-select">
+          <label className="viewer-tool-label" htmlFor={`${controlIdPrefix}-spin-axis`}>
             <span>Axis</span>
             <select
-              id="spin-axis-select"
+              id={`${controlIdPrefix}-spin-axis`}
               className="viewer-tool-select"
               value={spinAxis}
               onChange={(event) => setSpinAxis(event.target.value)}
@@ -890,10 +943,10 @@ export default function WellTrajectoryViewer({
             </select>
           </label>
 
-          <label className="viewer-tool-label viewer-tool-speed" htmlFor="spin-speed-range">
+          <label className="viewer-tool-label viewer-tool-speed" htmlFor={`${controlIdPrefix}-spin-speed`}>
             <span>Speed ({spinSpeed.toFixed(2)} rad/s)</span>
             <input
-              id="spin-speed-range"
+              id={`${controlIdPrefix}-spin-speed`}
               type="range"
               min="0.1"
               max="1.5"
@@ -903,6 +956,7 @@ export default function WellTrajectoryViewer({
             />
           </label>
         </div>
+        ) : null}
 
         <p className="viewer-toolbar-hint">
           {isVerticalProfileMode

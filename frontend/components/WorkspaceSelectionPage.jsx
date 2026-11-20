@@ -11,8 +11,8 @@ export default function WorkspaceSelectionPage() {
           <p className="workspace-eyebrow">Viewer Selection</p>
           <h1 className="workspace-title">Choose Your Workspace</h1>
           <p className="workspace-description">
-            Select the workflow that matches the task in front of you. The single-well viewer is fully active, and the
-            DSU route now supports a simple multi-well setup flow with surface coordinates and a shared 3D view.
+            Select the workflow that matches the task in front of you: a single-well viewer, a multi-well DSU view with
+            surface coordinates, or a side-by-side gyro vs. drilling survey comparison for DLS review.
           </p>
           <p className="helper-note">Use the DSU route when you need multiple surveys in one 3D scene. Use the single-well route when you want the 2D lateral view as well.</p>
         </header>
@@ -78,6 +78,45 @@ export default function WorkspaceSelectionPage() {
               </p>
               <Link href="/dsu-view" className="workspace-card-link workspace-card-link-secondary">
                 <span>Open DSU View</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </article>
+
+          <article className="workspace-card">
+            <div className="workspace-card-visual workspace-card-visual-compare" aria-hidden="true">
+              <svg viewBox="0 0 420 260" className="workspace-card-svg">
+                <rect x="0" y="0" width="420" height="260" rx="20" fill="#eef5f8" />
+                <rect x="18" y="18" width="186" height="224" rx="14" fill="#fffaf2" stroke="#d6c7ad" />
+                <rect x="216" y="18" width="186" height="224" rx="14" fill="#fffaf2" stroke="#d6c7ad" />
+                <path d="M70 40 C72 100 76 150 90 190 C100 214 124 226 170 230" fill="none" stroke="#0f7b8a" strokeWidth="5" strokeLinecap="round" />
+                <path d="M268 40 C270 100 274 150 288 190 C298 214 322 226 368 230" fill="none" stroke="#0f7b8a" strokeWidth="5" strokeLinecap="round" />
+                {[52, 82, 112, 142, 172].map((y) => (
+                  <circle key={`d-${y}`} cx={70 + (y - 40) * 0.05} cy={y} r="5" fill="#3f7d9e" opacity="0.7" />
+                ))}
+                {[48, 58, 68, 78, 88, 98, 108, 118, 128, 138, 148, 158].map((y) => (
+                  <circle
+                    key={`g-${y}`}
+                    cx={268 + (y - 40) * 0.05}
+                    cy={y}
+                    r={y === 98 ? 6 : y === 88 || y === 108 ? 5 : 3.5}
+                    fill={y === 98 ? "#d1242f" : y === 88 || y === 108 ? "#f2b705" : "#3f7d9e"}
+                    opacity={y === 98 || y === 88 || y === 108 ? 1 : 0.7}
+                  />
+                ))}
+                <text x="111" y="34" textAnchor="middle" fontSize="12" fontWeight="700" fill="#274152">Drilling</text>
+                <text x="309" y="34" textAnchor="middle" fontSize="12" fontWeight="700" fill="#274152">Gyro</text>
+              </svg>
+            </div>
+            <div className="workspace-card-body">
+              <p className="workspace-card-kicker">Survey QA Workflow</p>
+              <h2>Gyro vs. Drilling Survey</h2>
+              <p>
+                Load an original drilling survey and a newer gyro survey side by side, sync the MD window, and flag
+                high-DLS stations with adjustable red and yellow thresholds.
+              </p>
+              <Link href="/survey-compare" className="workspace-card-link workspace-card-link-secondary">
+                <span>Open Survey Compare</span>
                 <span aria-hidden="true">→</span>
               </Link>
             </div>
