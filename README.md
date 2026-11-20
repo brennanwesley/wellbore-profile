@@ -1,79 +1,36 @@
 # Wellbore Profile
 
-Phase 1 scaffold for a single-well 3D trajectory viewer.
+Free, public, browser-based viewer for directional surveys: single-well 3D/2D profiles and multi-well DSU views.
 
-## Stack
+Live: https://wellbore-profile.vercel.app
 
-- **Frontend:** Next.js (App Router) + React Three Fiber (deploy to Vercel)
-- **Backend:** Node.js + Express (deploy to Render)
-- **Database:** Supabase (not required to render Phase 1 trajectory, but client is pre-installed)
+## Architecture
 
-## Monorepo Structure
+- **Frontend (the whole app):** Next.js App Router + React Three Fiber in `frontend/`, deployed to Vercel (root directory `frontend`). All routes are static.
+- **Survey data stays in the browser.** Files are read and parsed client-side and kept only in memory. Nothing is uploaded, stored, or logged.
+- `backend/`, `render.yaml`, and `frontend/lib/supabaseClient.js` are legacy scaffolding. The frontend doesn't use them, and they're not needed to run or deploy the app.
 
-```text
-/
-├─ frontend/      # Next.js app
-├─ backend/       # Express API
-├─ render.yaml    # Render blueprint for backend service
-└─ package.json   # npm workspaces
-```
+See `docs/TECHNICAL_AUDIT_2026-11.md` for the latest technical audit.
 
 ## Local Development
 
-1. Install dependencies at repo root:
+```bash
+npm install
+npm run dev:frontend   # http://localhost:3000
+```
 
-   ```bash
-   npm install
-   ```
+No environment variables are required.
 
-2. Configure backend env:
+## Verification
 
-   - copy `backend/.env.example` -> `backend/.env`
+```bash
+npm test --workspace frontend
+npm run lint --workspace frontend
+npm run build:frontend
+```
 
-3. Configure frontend env:
+## Usage
 
-   - copy `frontend/.env.local.example` -> `frontend/.env.local`
-
-4. Start backend:
-
-   ```bash
-   npm run dev:backend
-   ```
-
-5. Start frontend (new terminal):
-
-   ```bash
-   npm run dev:frontend
-   ```
-
-6. Open `http://localhost:3000`.
-
-## Phase 1 Usage
-
-- Enter one point per line in the form `x,y,z`
-- Click **Render Trajectory**
-- Rotate / pan / zoom the 3D well path with your mouse
-
-## Deployment Setup Order (Fastest Path)
-
-1. **Supabase**
-   - Create a new project
-   - Copy:
-     - Project URL (`SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`)
-     - anon key (`NEXT_PUBLIC_SUPABASE_ANON_KEY`)
-     - service role key (`SUPABASE_SERVICE_ROLE_KEY`, backend only)
-
-2. **Render (Backend)**
-   - Create service from repo using `render.yaml`
-   - Set environment variables:
-     - `CORS_ORIGIN` = your Vercel frontend URL
-     - `SUPABASE_URL`
-     - `SUPABASE_SERVICE_ROLE_KEY`
-
-3. **Vercel (Frontend)**
-   - Import repo
-   - Set root directory to `frontend`
-   - Set environment variables:
-     - `NEXT_PUBLIC_API_BASE_URL` = your Render backend URL
-     - `NEXT_PUBLIC_SUPABASE_URL`
-     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+1. Open **Single Well** or **DSU View** from the workspace page.
+2. Upload a CSV/TXT survey (or paste a table), review the column mapping (MD, TVD, Northing, Easting required), and validate.
+3. View the trajectory in 3D and in the 2D lateral or vertical profile.

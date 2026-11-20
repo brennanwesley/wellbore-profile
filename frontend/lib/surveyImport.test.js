@@ -18,6 +18,36 @@ describe("survey import mapping", () => {
     expect(mappings.dls).toBe(4);
     expect(mappings.annotations).toBe(5);
   });
+
+  it("does not map short headers into unrelated fields", () => {
+    const options = buildColumnOptions([["MD", "TVD", "N", "E"]], 0);
+    const mappings = suggestMappings(options);
+
+    expect(mappings.md).toBe(0);
+    expect(mappings.tvd).toBe(1);
+    expect(mappings.inclination).toBe("");
+    expect(mappings.azimuth).toBe("");
+    expect(mappings.dls).toBe("");
+    expect(mappings.verticalSection).toBe("");
+    expect(mappings.subSea).toBe("");
+    expect(mappings.annotations).toBe("");
+  });
+
+  it("maps two-letter coordinate headers exactly without leaking into annotations", () => {
+    const options = buildColumnOptions([["MD", "TVD", "NS", "EW", "Incl", "Azi", "VS"]], 0);
+    const mappings = suggestMappings(options);
+
+    expect(mappings).toMatchObject({
+      md: 0,
+      tvd: 1,
+      northing: 2,
+      easting: 3,
+      inclination: 4,
+      azimuth: 5,
+      verticalSection: 6,
+      annotations: "",
+    });
+  });
 });
 
 describe("survey import validation", () => {

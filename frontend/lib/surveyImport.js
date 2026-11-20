@@ -343,7 +343,7 @@ export function suggestMappings(columnOptions) {
           score = 100;
         } else if (normalizedHeader.includes(normalizedAlias)) {
           score = 60;
-        } else if (normalizedAlias.includes(normalizedHeader)) {
+        } else if (normalizedHeader.length >= 3 && normalizedAlias.includes(normalizedHeader)) {
           score = 35;
         }
 
